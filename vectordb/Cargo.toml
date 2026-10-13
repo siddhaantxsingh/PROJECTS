@@ -3,7 +3,7 @@ name = "vectordb"
 version = "0.1.0"
 edition = "2021"
 description = "Persistent approximate nearest-neighbour search engine: HNSW, product quantization, SIMD distances, WAL + snapshots"
-rust-version = "1.80"
+rust-version = "1.89"
 
 [dependencies]
 parking_lot = "0.12"

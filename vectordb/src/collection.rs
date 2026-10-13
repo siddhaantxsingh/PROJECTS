@@ -41,6 +41,8 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("collection config mismatch: {0}")]
     Config(String),
+    #[error("collection directory {0} is already open (LOCK held by another handle or process)")]
+    Locked(PathBuf),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -111,6 +113,7 @@ pub struct Stats {
     pub hnsw_max_level: usize,
     pub pq: Option<(usize, usize)>,
     pub vector_bytes: usize,
+    pub graph_bytes: usize,
     pub pq_bytes: usize,
     pub queries: u64,
     pub writes: u64,
@@ -131,6 +134,9 @@ pub struct Collection {
     pub queries: AtomicU64,
     pub writes: AtomicU64,
     pub recovered: RecoveryReport,
+    /// Exclusive advisory lock on `<dir>/LOCK`, held for the handle's lifetime
+    /// so two writers can never append to the same WAL.
+    _lock: std::fs::File,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -156,6 +162,12 @@ impl Collection {
             return Err(Error::Config("m must be 2..128 and ef_construction 1..4096".into()));
         }
         std::fs::create_dir_all(dir)?;
+        let lock = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(dir.join("LOCK"))?;
+        match lock.try_lock() {
+            Ok(()) => {}
+            Err(std::fs::TryLockError::WouldBlock) => return Err(Error::Locked(dir.to_path_buf())),
+            Err(std::fs::TryLockError::Error(e)) => return Err(e.into()),
+        }
         let cfg_path = dir.join("config.json");
         match std::fs::read(&cfg_path) {
             Ok(b) => {
@@ -203,6 +215,7 @@ impl Collection {
             queries: AtomicU64::new(0),
             writes: AtomicU64::new(0),
             recovered: report,
+            _lock: lock,
         })
     }
 
@@ -354,6 +367,7 @@ impl Collection {
             hnsw_max_level: inner.hnsw.max_level,
             pq: inner.pq.as_ref().map(|p| (p.m, p.ksub)),
             vector_bytes: inner.store.data.len() * 4,
+            graph_bytes: inner.hnsw.memory_bytes(),
             pq_bytes: inner.pq.as_ref().map_or(0, |p| p.memory_bytes()),
             queries: self.queries.load(Ordering::Relaxed),
             writes: self.writes.load(Ordering::Relaxed),

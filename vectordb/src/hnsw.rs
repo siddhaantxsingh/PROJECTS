@@ -112,6 +112,12 @@ impl Hnsw {
         self.levels.len()
     }
 
+    /// Heap bytes of the adjacency lists (capacity, plus `Vec` headers) and levels.
+    pub fn memory_bytes(&self) -> usize {
+        let hdr = std::mem::size_of::<Vec<u32>>();
+        self.levels.capacity() + self.links.iter().map(|l| hdr + l.iter().map(|x| hdr + x.capacity() * 4).sum::<usize>()).sum::<usize>()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.levels.is_empty()
     }

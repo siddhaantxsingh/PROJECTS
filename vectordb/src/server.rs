@@ -49,6 +49,7 @@ impl From<CollError> for ApiError {
             CollError::Invalid(x) => ApiError::Bad(x.to_string()),
             CollError::BadRequest(x) => ApiError::Bad(x),
             CollError::Config(x) => ApiError::Conflict(x),
+            CollError::Locked(p) => ApiError::Conflict(format!("{} is locked by another handle", p.display())),
             other => ApiError::Internal(other.to_string()),
         }
     }

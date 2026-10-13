@@ -6,7 +6,7 @@ use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
-use vectordb::collection::{Collection, Config, Mode, SearchRequest};
+use vectordb::collection::{Collection, Config, Error, Mode, SearchRequest};
 use vectordb::distance::Metric;
 use vectordb::filter::{Filter, Metadata, Value};
 use vectordb::wal::SyncMode;
@@ -71,7 +71,11 @@ fn input_validation() {
     assert!(c.search(&SearchRequest { mode: Mode::Pq, ..req(vec![1.0, 0.0, 0.0, 0.0], 1) }).is_err());
     // nothing invalid reached the WAL
     assert_eq!(c.stats().lsn, 1);
-    assert!(Collection::open(d.path(), Config::new(5, Metric::Cosine), SyncMode::Never).is_err());
+    // a second handle on the same directory is refused while the first is open
+    assert!(matches!(Collection::open(d.path(), Config::new(4, Metric::Cosine), SyncMode::Never), Err(Error::Locked(_))));
+    drop(c);
+    assert!(matches!(Collection::open(d.path(), Config::new(5, Metric::Cosine), SyncMode::Never), Err(Error::Config(_))));
+    assert_eq!(Collection::open(d.path(), Config::new(4, Metric::Cosine), SyncMode::Never).unwrap().stats().live, 1);
 }
 
 #[test]
