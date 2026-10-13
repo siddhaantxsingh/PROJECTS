@@ -1,4 +1,6 @@
-# HANDOFF — 15-project engineering portfolio (session of 2026-10-14)
+# HANDOFF — 15-project engineering portfolio
+
+> **Update, 2026-10-13 (Claude Code session):** this session finished the vector DB (project 6) and published the three finished projects to GitHub, in `siddhaantxsingh/PROJECTS` on branch `ccr-a6e6c567-y4w7k8`, as one monorepo with one top-level directory per project. Sections marked *(updated)* below reflect this session. Two things were not available to this session: the per-repo git bundles, so the earlier commit history was **not** carried over (the first commit imports the packaged working trees), and the `master/` tracking files, so the status table below serves as the tracker.
 
 Workspace: `/home/claude/projects/p15/` (cloud sandbox). Packaged copies live in `/mnt/user-data/outputs/p15/`: zip and git bundle per repository, plus `master/`.
 
@@ -36,13 +38,13 @@ Each one must pass the quality gates for correctness, reliability, security, per
 |---|---|---|---|
 | 10 | RAG + Evaluation Engine ("Groundwork") | `groundwork/` HEAD `4878898` | **Done**: 72 tests pass; benchmarks, audit, docs done. Packaged. |
 | 14 | Campus AI OS | `campus-ai-os/` HEAD `48261a4` | **Done** as a vertical slice: 39 API tests and 1 browser E2E pass; audit done. Packaged. No real users. |
-| 6 | Vector DB (Rust) | `vectordb/` HEAD `95115a6` | **In progress.** Core library is done and tested; the REST/gRPC server compiles but is **untested**; benchmark harness, FAISS comparison and docs are not started. |
+| 6 | Vector DB (Rust) | `vectordb/` | **Done** *(updated)*: 36 tests pass, including the server end-to-end tests; benchmarked at 100k × 128 against FAISS; audit found 6 defects, all fixed with regression tests; docs, ADRs, CI and Dockerfile written. |
 | 11, 9, 16, 20, 13, 18 | RISC-V, distributed training (CPU), Industrial Edge, EdgeFleet, accelerator RTL, Nebula | — | Not started (feasible here, with the limits listed in `master/MASTER_RESOURCE_BUDGET.md`). |
 | 8, 7, 17 | CUDA kernels, LLM inference engine, InferX | — | Not started; their GPU parts are BLOCKED (no GPU or nvcc here). |
 | 15, 19 | MCP Fabric, EvalOps (Java/Spring) | — | BLOCKED: Maven Central returns 403 through the sandbox proxy. |
 | 12 | UVM SoC verification | — | BLOCKED: no UVM-capable simulator (only Verilator 5.020). |
 
-Revised order (recorded in `master/MASTER_DECISIONS.md`): 10 ✓ → 14 ✓ → **6 (current)** → 11 → 9 → 16 → 20 → 13 → 18 → 8 → 7 → 17. The blocked projects (15, 19, 12) come last.
+Revised order (recorded in `master/MASTER_DECISIONS.md`): 10 ✓ → 14 ✓ → 6 ✓ → **11 (next)** → 9 → 16 → 20 → 13 → 18 → 8 → 7 → 17. The blocked projects (15, 19, 12) come last.
 
 ## Completed changes
 
@@ -94,37 +96,49 @@ Rust 1.97. Commits `234006c` (core) and `95115a6` (WIP server).
   - recovery loads the snapshot, then replays the WAL;
   - filtered search: if the filter's estimated selectivity is below 2 %, it falls back to exact search; otherwise HNSW runs with a scaled-up ef;
   - also: rebuild/compaction, PQ training, stats, and `check()`.
-- **Server, WIP and untested:**
+- **Server** (tested as of 2026-10-13; see `vectordb/docs/testing.md`):
   - `server.rs`: axum REST and tonic gRPC; the proto is compiled with protox in `build.rs`, so no protoc is needed. Also a Prometheus `/metrics` endpoint and collection-name validation.
   - `main.rs`: `serve` and `check` subcommands, graceful shutdown on SIGINT/SIGTERM.
 
-## Unfinished work: exact next steps
+## Unfinished work: exact next steps *(updated)*
 
-### Vector DB (project 6, current)
+### Vector DB (project 6): done
 
-1. Run `cd vectordb && cargo test --test api`. `tests/api.rs` was written but **never compiled or run**; the session was interrupted at that step. It probably needs fixes: its gRPC incoming-stream helper uses `futures_core::Stream`, and `futures-core` was added to the dev-dependencies.
-2. Replace the placeholder `src/bin/bench.rs` with the real benchmark harness:
-   - a deterministic Gaussian-mixture dataset (for example 100k × 128), also written out in `.fvecs` format;
-   - HNSW build time; recall@10 against exact search across ef values; QPS on 1 and 2 threads; p50/p95/p99 latency;
-   - memory (vector bytes, graph size, RSS from `/proc/self/status`);
-   - filtered queries at 50 %, 10 % and 1 % selectivity;
-   - PQ recall and memory; snapshot size and time; recovery time.
-3. FAISS baseline: `pip install --break-system-packages faiss-cpu` (PyPI is reachable). Write `benchmarks/faiss_baseline.py` running `IndexHNSWFlat` with the same M, efConstruction and efSearch on the same `.fvecs`. Compare recall and QPS, and label the results as single-machine, 2 vCPU.
-4. Run an adversarial audit with a subagent. **Commit before fixing anything**, so that fail-before can be re-run.
-5. Write the docs: README, `docs/architecture.md`, benchmarks, testing, security, limitations, requirements matrix, ADRs; a CI workflow; a Dockerfile. Then package to `/mnt/user-data/outputs/p15/vectordb.{zip,bundle}`.
-6. Known design limits to document:
-   - inserts are serialized by a global write lock (searches still run concurrently);
-   - tombstoned nodes are kept for navigation until `rebuild`;
-   - snapshotting clones the whole state in memory;
-   - after a restart, newly inserted nodes get different random levels than an uninterrupted run would (RNG reseeded from `seed ^ lsn`).
+What this session did:
 
-### After that
+- Made the server tests pass. The only compile error was a missing `IntoFuture` import. The servers now also shut down gracefully, so the restart test restarts for real.
+- Added an exclusive `LOCK` file per collection. Before this, two handles could append to the same WAL.
+- Wrote the real `vdb-bench` harness and `benchmarks/faiss_baseline.py`. Results are in `vectordb/benchmarks/results/2026-10-13/` and are rendered to `vectordb/docs/benchmarks.md`. The first version of the harness drew its queries from different cluster centres than the base set; this was found and fixed before publishing.
+- Ran the adversarial audit with a subagent:
+  - the reproductions were committed while still failing, with the log in `test-logs/audit-fail-before.txt`;
+  - the defects were then fixed;
+  - details are in `vectordb/docs/audit.md`.
 
-Projects 11 → 9 → 16 → 20 → 13 → 18, then the CPU-only parts of 8 / 7 / 17. Finally, the consolidated 15-project report in `master/`.
+Optional follow-ups, all documented as limitations:
+
+- a cost-based filter planner and a columnar metadata index (filtered search at 1–10 % selectivity takes about 13–18 ms);
+- an IVF coarse quantizer for PQ;
+- fault-injection tests for the WAL rollback path;
+- real datasets such as SIFT1M.
+
+### Next: projects 11 → 9 → 16 → 20 → 13 → 18
+
+After those come the CPU-only parts of 8, 7 and 17, and then the consolidated 15-project report. Add each project as a new top-level directory in this monorepo, with its own `.github/workflows/<name>.yml` that uses `paths:` filters, as in the existing workflows.
+
+### GitHub / CI *(updated)*
+
+- CI now runs on GitHub Actions for all three projects.
+- The first runs exposed two problems, both fixed:
+  - the Python suites imported `tests.*`, which only resolved under `python -m pytest` (fixed by setting `pythonpath = ["."]`);
+  - GitHub's newer stable clippy (1.99) added a lint that the local 1.97 toolchain lacked.
 
 ## Known bugs and open issues
 
-- **vectordb:** the REST/gRPC server and `tests/api.rs` are unverified. `src/bin/bench.rs` is a placeholder.
+- **vectordb** *(updated)*: see `vectordb/docs/limitations.md`. The main items:
+  - no authentication;
+  - slow filtered search at mid and low selectivity;
+  - maintenance operations block traffic;
+  - no fault-injection tests.
 - **Groundwork:**
   - paraphrased prompt injections go undetected (0/200);
   - groundedness is a lexical proxy;
@@ -137,7 +151,7 @@ Projects 11 → 9 → 16 → 20 → 13 → 18, then the CPU-only parts of 8 / 7 
   - an admin demoting the last instructor leaves the course with no instructor.
 - **All repos:**
   - Dockerfiles were never built (Docker Hub is blocked);
-  - CI was never run on GitHub;
+  - CI now runs on GitHub *(updated)*;
   - no LICENSE file (owner decision pending).
 
 ## Tests actually run (all in this sandbox) and results
@@ -155,7 +169,13 @@ Projects 11 → 9 → 16 → 20 → 13 → 18, then the CPU-only parts of 8 / 7 
 | vectordb | `cargo test --lib` | 17 passed |
 | vectordb | `cargo test --test collection` | 9 passed (recovery, crash at many WAL byte offsets, corrupt snapshot, rebuild, PQ, filter property test, concurrency) |
 | vectordb | `cargo build --release` (with the server) | compiles, no warnings |
-| vectordb | `cargo test --test api` | **NOT RUN** |
+| vectordb | `cargo test --test api` *(updated, 2026-10-13)* | 2 passed |
+| vectordb | `cargo test` (lib 17, api 2, collection 9, audit 7, audit_pq_rerank 1) *(2026-10-13)* | 36 passed (`vectordb/test-logs/cargo-test-after-audit.txt`) |
+| vectordb | audit reproductions against the pre-fix code *(2026-10-13)* | 5 failed and 1 aborted the process (`vectordb/test-logs/audit-fail-before.txt`) |
+| vectordb | `vdb-bench` with the `lowrank` and `mixture` datasets, plus `faiss_baseline.py` (faiss-cpu 1.15.1) *(2026-10-13)* | `vectordb/benchmarks/results/2026-10-13/` |
+| vectordb | clippy `-D warnings` on 1.97 and 1.99; build on MSRV 1.89 *(2026-10-13)* | clean / OK |
+| groundwork | `pytest` re-run in the Claude Code container (PG 16.15 + pgvector 0.6.0 + Redis 7.0) *(2026-10-13)* | 72 passed |
+| campus-ai-os | backend `pytest`, `npm run build`, `npx playwright test` re-run *(2026-10-13)* | 39 passed; build OK; 1 passed |
 
 ## Setup commands
 
@@ -192,7 +212,7 @@ The bundles are in the outputs folder `p15/`.
 
 - 2 vCPU, 7.8 GiB RAM, about 7 GB free disk; no GPU.
 - **Reachable:** PyPI, npm, crates.io, proxy.golang.org.
-- **Blocked (HTTP 403):** Maven Central, Hugging Face, Docker Hub, GitHub.
+- **Blocked (HTTP 403):** Maven Central, Hugging Face, Docker Hub, GitHub. This applied to the earlier sandbox. The Claude Code container used on 2026-10-13 can push to GitHub and has 4 vCPUs and 15 GiB RAM.
 - The weekly usage allowance is not visible to the agent, so no figures are recorded.
 
 ## Tracking files
