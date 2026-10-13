@@ -95,7 +95,7 @@ fn decode_payload(p: &[u8]) -> Result<Record, String> {
                 return Err("dimension too large".into());
             }
             let raw = take(&mut c, dim * 4)?;
-            let vector = raw.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect();
+            let vector = raw.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect();
             let ml = u32::from_le_bytes(take(&mut c, 4)?.try_into().unwrap()) as usize;
             let mb = take(&mut c, ml)?;
             let meta = if ml == 0 { None } else { Some(serde_json::from_slice(&mb).map_err(|e| e.to_string())?) };

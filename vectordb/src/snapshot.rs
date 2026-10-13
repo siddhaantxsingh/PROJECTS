@@ -75,7 +75,7 @@ impl<'a> R<'a> {
         Ok(n)
     }
     fn f32s(&mut self, n: usize) -> Result<Vec<f32>, SnapError> {
-        Ok(self.take(n * 4)?.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect())
+        Ok(self.take(n * 4)?.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect())
     }
     fn bytes(&mut self) -> Result<&'a [u8], SnapError> {
         let n = self.len(self.0.len())?;
