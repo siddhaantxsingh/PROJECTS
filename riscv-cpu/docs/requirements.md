@@ -18,4 +18,4 @@
 | Coverage measurement | NOT IMPLEMENTED | — |
 | Caches / bus interface | NOT IMPLEMENTED | idealised single-cycle memories |
 | Privilege modes U/S, MMU, PMP | NOT IMPLEMENTED | M-mode only |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/riscv-cpu.yml` (status recorded in README once run) |
+| CI | VERIFIED | `.github/workflows/riscv-cpu.yml` green on GitHub Actions (run 38482941592), including the Spike cross-check job |

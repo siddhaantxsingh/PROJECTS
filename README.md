@@ -22,8 +22,8 @@ Projects still being built (in build order):
 
 | Project | Directory | Stack | Status |
 |---|---|---|---|
-| RISC-V CPU | [`riscv-cpu/`](riscv-cpu/) | SystemVerilog, Verilator | In progress |
-| Distributed training | [`distributed-training/`](distributed-training/) | | Not started |
+| RISC-V CPU | [`riscv-cpu/`](riscv-cpu/) | SystemVerilog, Verilator, C++ | Done: riscv-tests 64/64, random tests match Spike, CoreMark 2.87/MHz |
+| Distributed training | [`distributed-training/`](distributed-training/) | Python/NumPy, TCP | Done (CPU): DDP + ZeRO-1 + elastic restart, 36 tests |
 | Industrial Edge | [`industrial-edge/`](industrial-edge/) | | Not started |
 | EdgeFleet | [`edgefleet/`](edgefleet/) | | Not started |
 | INT8/FP8 accelerator | [`int8-fp8-accelerator/`](int8-fp8-accelerator/) | | Not started |

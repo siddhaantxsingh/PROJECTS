@@ -1,0 +1,21 @@
+name: distributed-training
+on:
+  push:
+    paths: ["distributed-training/**", ".github/workflows/distributed-training.yml"]
+  pull_request:
+    paths: ["distributed-training/**", ".github/workflows/distributed-training.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: distributed-training }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e '.[dev]'
+      - run: python -m pytest
+      # smoke: real data download (checksum-verified) and a short 2-rank run with a crash + restart
+      - run: |
+          python -m dtrain.launch --nproc 2 --max-restarts 1 -- python -m dtrain.train --mode ddp --steps 6 \
+            --ckpt-dir /tmp/ck --ckpt-every 2 --resume --fail-at-step 3
