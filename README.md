@@ -18,17 +18,24 @@ The project statuses use these terms:
 
 Each project's `docs/requirements.md` gives the status per requirement, and its `docs/limitations.md` lists what is known not to work. None of the projects is deployed. The Docker images have not been built.
 
-Twelve further projects from the original plan have not been started. The next ones planned are:
+Projects still being built (in build order):
 
-- RISC-V CPU
-- distributed training
-- Industrial Edge
-- EdgeFleet
-- the INT8/FP8 accelerator
-- Nebula
-- the CPU-only parts of the CUDA kernels, the LLM inference engine and InferX
+| Project | Directory | Stack | Status |
+|---|---|---|---|
+| RISC-V CPU | [`riscv-cpu/`](riscv-cpu/) | SystemVerilog, Verilator | In progress |
+| Distributed training | [`distributed-training/`](distributed-training/) | | Not started |
+| Industrial Edge | [`industrial-edge/`](industrial-edge/) | | Not started |
+| EdgeFleet | [`edgefleet/`](edgefleet/) | | Not started |
+| INT8/FP8 accelerator | [`int8-fp8-accelerator/`](int8-fp8-accelerator/) | | Not started |
+| Nebula GPU cloud | [`nebula-gpu-cloud/`](nebula-gpu-cloud/) | | Not started |
+| CUDA kernels | [`cuda-kernels/`](cuda-kernels/) | | Not started (no GPU here) |
+| LLM inference engine | [`llm-inference-engine/`](llm-inference-engine/) | | Not started |
+| InferX | [`inferx/`](inferx/) | | Not started |
+| MCP Fabric | [`mcp-fabric/`](mcp-fabric/) | Java / Spring | Not started (Maven is reachable now) |
+| EvalOps | [`evalops/`](evalops/) | Java / Spring | Not started (Maven is reachable now) |
+| UVM SoC verification | [`uvm-soc-verification/`](uvm-soc-verification/) | | Not started |
 
-See [HANDOFF.md](HANDOFF.md) for the full list, what blocks each project, and the exact next steps.
+See [HANDOFF.md](HANDOFF.md) for the plan and what blocks each project.
 
 ## Running the tests
 
