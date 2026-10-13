@@ -23,7 +23,7 @@ fn vec_for(i: u64, dim: usize) -> Vec<f32> {
 fn meta(i: u64) -> Metadata {
     let mut m = BTreeMap::new();
     m.insert("group".to_string(), Value::Int((i % 10) as i64));
-    m.insert("even".to_string(), Value::Bool(i % 2 == 0));
+    m.insert("even".to_string(), Value::Bool(i.is_multiple_of(2)));
     m
 }
 

@@ -4,7 +4,7 @@
 //! * `L2`      squared Euclidean distance
 //! * `Ip`      negative inner product
 //! * `Cosine`  1 - cos(a, b); vectors are L2-normalised on insert, so this is
-//!             computed as 1 - dot(a, b)
+//!   computed as 1 - dot(a, b)
 //!
 //! The SIMD kernels are tested against the scalar ones on random inputs of
 //! every length 0..300 (tail handling) and with a relative tolerance, since

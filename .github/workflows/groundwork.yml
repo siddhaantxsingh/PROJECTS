@@ -1,9 +1,14 @@
-# Not executed on GitHub yet (no remote); the same steps were run locally.
-name: ci
-on: [push, pull_request]
+name: groundwork
+on:
+  push:
+    paths: ["groundwork/**", ".github/workflows/groundwork.yml"]
+  pull_request:
+    paths: ["groundwork/**", ".github/workflows/groundwork.yml"]
 jobs:
   test:
     runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: groundwork }
     services:
       postgres:
         image: pgvector/pgvector:pg16

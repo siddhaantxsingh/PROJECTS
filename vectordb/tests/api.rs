@@ -36,9 +36,7 @@ async fn start(dir: &std::path::Path) -> Running {
     let h = axum::serve(l, router(Arc::clone(&reg))).with_graceful_shutdown(wait(rx.clone())).into_future();
     let gl = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let grpc = format!("http://{}", gl.local_addr().unwrap());
-    let g = tonic::transport::Server::builder()
-        .add_service(VectorDbServer::new(Grpc(reg)))
-        .serve_with_incoming_shutdown(async_stream_listener(gl), wait(rx));
+    let g = tonic::transport::Server::builder().add_service(VectorDbServer::new(Grpc(reg))).serve_with_incoming_shutdown(async_stream_listener(gl), wait(rx));
     let tasks = vec![tokio::spawn(async move { h.await.unwrap() }), tokio::spawn(async move { g.await.unwrap() })];
     Running { http, grpc, stop: tx, tasks }
 }
@@ -79,7 +77,12 @@ async fn rest_lifecycle_and_errors() {
     let r: Value = c
         .post(format!("{http}/collections/docs/search"))
         .json(&json!({"vector": [0.9, 0.0, 0.0], "k": 2, "filter": {"eq": ["lang", "en"]}}))
-        .send().await.unwrap().json().await.unwrap();
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
     assert_eq!(r["hits"].as_array().unwrap().iter().map(|h| h["id"].as_u64().unwrap()).collect::<Vec<_>>(), vec![1, 3]);
     let bad = c.post(format!("{http}/collections/docs/search")).json(&json!({"vector": [0.9, 0.0], "k": 2})).send().await.unwrap();
     assert_eq!(bad.status(), 422);
@@ -101,10 +104,7 @@ async fn grpc_round_trip_and_restart_recovery() {
     {
         let srv = start(d.path()).await;
         let (http, grpc) = (srv.http.clone(), srv.grpc.clone());
-        reqwest::Client::new()
-            .put(format!("{http}/collections/g"))
-            .json(&json!({"dim": 2, "metric": "cosine", "m": 8, "ef_construction": 32, "seed": 1}))
-            .send().await.unwrap();
+        reqwest::Client::new().put(format!("{http}/collections/g")).json(&json!({"dim": 2, "metric": "cosine", "m": 8, "ef_construction": 32, "seed": 1})).send().await.unwrap();
         let mut cl = VectorDbClient::connect(grpc).await.unwrap();
         let pts = (0..50u64).map(|i| pb::Point { id: i, vector: vec![(i as f32).cos(), (i as f32).sin()], metadata_json: format!("{{\"i\": {i}}}") }).collect();
         let up = cl.upsert(pb::UpsertRequest { collection: "g".into(), points: pts }).await.unwrap().into_inner();

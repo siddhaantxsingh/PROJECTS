@@ -5,6 +5,7 @@
 //! index work runs on tokio's blocking pool. A Prometheus-style `/metrics`
 //! endpoint reports per-collection counters and a global search latency
 //! histogram.
+#![allow(clippy::result_large_err)] // tonic::Status is the gRPC error type
 
 use crate::collection::{Collection, Config, Error as CollError, Mode, SearchRequest};
 use crate::filter::{Filter, Metadata};
@@ -173,11 +174,9 @@ pub fn router(reg: Arc<Registry>) -> Router {
         .route("/collections", get(|State(r): St| async move { Json(r.cols.read().keys().cloned().collect::<Vec<_>>()) }))
         .route(
             "/collections/:name",
-            put(|State(r): St, AxPath(name): AxPath<String>, Json(cfg): Json<Config>| async move {
-                blocking(move || r.create(&name, cfg).map(|c| Json(c.stats()))).await
-            })
-            .get(|State(r): St, AxPath(name): AxPath<String>| async move { r.get(&name).map(|c| Json(c.stats())) })
-            .delete(|State(r): St, AxPath(name): AxPath<String>| async move { blocking(move || r.drop_collection(&name).map(|_| StatusCode::NO_CONTENT)).await }),
+            put(|State(r): St, AxPath(name): AxPath<String>, Json(cfg): Json<Config>| async move { blocking(move || r.create(&name, cfg).map(|c| Json(c.stats()))).await })
+                .get(|State(r): St, AxPath(name): AxPath<String>| async move { r.get(&name).map(|c| Json(c.stats())) })
+                .delete(|State(r): St, AxPath(name): AxPath<String>| async move { blocking(move || r.drop_collection(&name).map(|_| StatusCode::NO_CONTENT)).await }),
         )
         .route(
             "/collections/:name/points",
@@ -221,18 +220,27 @@ pub fn router(reg: Arc<Registry>) -> Router {
                 .await
             }),
         )
-        .route("/collections/:name/snapshot", post(|State(r): St, AxPath(name): AxPath<String>| async move {
-            let c = r.get(&name)?;
-            blocking(move || Ok(Json(serde_json::json!({ "lsn": c.snapshot()? })))).await
-        }))
-        .route("/collections/:name/rebuild", post(|State(r): St, AxPath(name): AxPath<String>| async move {
-            let c = r.get(&name)?;
-            blocking(move || Ok(Json(c.rebuild()?))).await
-        }))
-        .route("/collections/:name/train_pq", post(|State(r): St, AxPath(name): AxPath<String>, Json(p): Json<PqIn>| async move {
-            let c = r.get(&name)?;
-            blocking(move || Ok(Json(c.train_pq(p.m, p.max_train)?))).await
-        }))
+        .route(
+            "/collections/:name/snapshot",
+            post(|State(r): St, AxPath(name): AxPath<String>| async move {
+                let c = r.get(&name)?;
+                blocking(move || Ok(Json(serde_json::json!({ "lsn": c.snapshot()? })))).await
+            }),
+        )
+        .route(
+            "/collections/:name/rebuild",
+            post(|State(r): St, AxPath(name): AxPath<String>| async move {
+                let c = r.get(&name)?;
+                blocking(move || Ok(Json(c.rebuild()?))).await
+            }),
+        )
+        .route(
+            "/collections/:name/train_pq",
+            post(|State(r): St, AxPath(name): AxPath<String>, Json(p): Json<PqIn>| async move {
+                let c = r.get(&name)?;
+                blocking(move || Ok(Json(c.train_pq(p.m, p.max_train)?))).await
+            }),
+        )
         .layer(DefaultBodyLimit::max(64 << 20))
         .with_state(reg)
 }
@@ -294,14 +302,7 @@ impl pb::vector_db_server::VectorDb for Grpc {
             "pq" => Mode::Pq,
             m => return Err(tonic::Status::invalid_argument(format!("unknown mode {m}"))),
         };
-        let sr = SearchRequest {
-            vector: r.vector,
-            k: r.k as usize,
-            ef: (r.ef > 0).then_some(r.ef as usize),
-            filter,
-            mode,
-            rerank: (r.rerank > 0).then_some(r.rerank as usize),
-        };
+        let sr = SearchRequest { vector: r.vector, k: r.k as usize, ef: (r.ef > 0).then_some(r.ef as usize), filter, mode, rerank: (r.rerank > 0).then_some(r.rerank as usize) };
         let reg = self.0.clone();
         let res = blocking(move || {
             let res = c.search(&sr)?;

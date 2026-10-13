@@ -1,9 +1,11 @@
 //! Benchmark harness.
 //!
-//! `vdb-bench --out DIR [--n 100000] [--dim 128] [--queries 1000] [--m 16]
-//!            [--ef-construction 200] [--seed 7] [--skip-pq]`
+//! `vdb-bench --out DIR [--dataset lowrank|mixture] [--n 100000] [--dim 128]
+//!            [--queries 1000] [--m 16] [--ef-construction 200] [--seed 7] [--skip-pq]`
 //!
-//! Generates a deterministic Gaussian-mixture dataset, writes it as
+//! `--dataset lowrank` (default) or `--dataset mixture`; see the generators.
+//!
+//! Generates a deterministic synthetic dataset, writes it as
 //! `base.fvecs` / `query.fvecs` / `groundtruth.ivecs` (top-100 exact L2
 //! neighbours, so other engines can be measured on identical data), then
 //! measures through the public `Collection` API:
@@ -42,7 +44,9 @@ fn gauss(r: &mut SmallRng) -> f32 {
     ((-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()) as f32
 }
 
-/// `n` points from a mixture of 64 Gaussians (centres ~ N(0, 1), spread 0.35).
+/// `n` points from a mixture of 64 Gaussians in the full space (centres ~
+/// N(0, 1), spread 0.35). High intrinsic dimensionality: neighbours inside a
+/// cluster are nearly equidistant, a hard case for any graph index.
 fn mixture(n: usize, dim: usize, seed: u64) -> Vec<Vec<f32>> {
     let mut r = SmallRng::seed_from_u64(seed);
     let centres: Vec<Vec<f32>> = (0..64).map(|_| (0..dim).map(|_| gauss(&mut r)).collect()).collect();
@@ -53,6 +57,25 @@ fn mixture(n: usize, dim: usize, seed: u64) -> Vec<Vec<f32>> {
         })
         .collect()
 }
+
+/// `n` points with low intrinsic dimension, closer to real embeddings: a
+/// 64-component Gaussian mixture in a 16-d latent space, mapped to `dim`
+/// dimensions by a fixed random linear map, plus isotropic noise (0.05).
+fn lowrank(n: usize, dim: usize, seed: u64) -> Vec<Vec<f32>> {
+    const LATENT: usize = 16;
+    let mut r = SmallRng::seed_from_u64(seed);
+    let a: Vec<f32> = (0..dim * LATENT).map(|_| gauss(&mut r) / (LATENT as f32).sqrt()).collect();
+    let centres: Vec<Vec<f32>> = (0..64).map(|_| (0..LATENT).map(|_| gauss(&mut r)).collect()).collect();
+    (0..n)
+        .map(|_| {
+            let c = &centres[r.gen_range(0..centres.len())];
+            let z: Vec<f32> = c.iter().map(|x| x + 0.35 * gauss(&mut r)).collect();
+            (0..dim).map(|i| (0..LATENT).map(|j| a[i * LATENT + j] * z[j]).sum::<f32>() + 0.05 * gauss(&mut r)).collect()
+        })
+        .collect()
+}
+
+type Generator = fn(usize, usize, u64) -> Vec<Vec<f32>>;
 
 fn write_fvecs(p: &Path, vs: &[Vec<f32>]) -> std::io::Result<()> {
     let mut w = std::io::BufWriter::new(std::fs::File::create(p)?);
@@ -107,9 +130,12 @@ fn req(v: &[f32], k: usize, ef: Option<usize>, filter: Option<Filter>, mode: Mod
 }
 
 /// Runs every query once on `threads` threads; returns (ids per query, latencies in µs, wall seconds).
-fn run(c: &Arc<Collection>, reqs: &[SearchRequest], threads: usize) -> (Vec<Vec<u64>>, Vec<f64>, f64) {
+type Batch = (Vec<Vec<u64>>, Vec<f64>, f64);
+
+fn run(c: &Arc<Collection>, reqs: &[SearchRequest], threads: usize) -> Batch {
     let t0 = Instant::now();
-    let chunks: Vec<(usize, Vec<(Vec<u64>, f64)>)> = std::thread::scope(|s| {
+    type PerThread = (usize, Vec<(Vec<u64>, f64)>);
+    let chunks: Vec<PerThread> = std::thread::scope(|s| {
         let hs: Vec<_> = (0..threads)
             .map(|t| {
                 let c = Arc::clone(c);
@@ -171,6 +197,12 @@ fn main() {
     let efc: usize = arg(&args, "--ef-construction", 200);
     let seed: u64 = arg(&args, "--seed", 7);
     let skip_pq = args.iter().any(|a| a == "--skip-pq");
+    let kind: String = arg(&args, "--dataset", "lowrank".to_string());
+    let (gen, desc): (Generator, &str) = match kind.as_str() {
+        "mixture" => (mixture, "mixture of 64 Gaussians in the full space, centres N(0,1), spread 0.35"),
+        "lowrank" => (lowrank, "64-component Gaussian mixture in a 16-d latent space, random linear map to dim, noise 0.05"),
+        other => panic!("unknown --dataset {other} (mixture | lowrank)"),
+    };
     let k = 10;
     std::fs::create_dir_all(&out).unwrap();
     let mut res = serde_json::Map::new();
@@ -179,11 +211,12 @@ fn main() {
         json!({"n": n, "dim": dim, "queries": nq, "m": m, "ef_construction": efc, "seed": seed, "metric": "l2",
                "kernel": vectordb::distance::kernel_name(),
                "cpus": std::thread::available_parallelism().map(|p| p.get()).unwrap_or(1),
-               "wal_sync": "never", "dataset": "mixture of 64 Gaussians, centres N(0,1), spread 0.35"}),
+               "wal_sync": "never", "dataset": kind, "dataset_description": desc}),
     );
     eprintln!("generating {n} x {dim} (+{nq} queries)");
-    let base = mixture(n, dim, seed);
-    let queries = mixture(nq, dim, seed ^ 0x9e37_79b9_7f4a_7c15);
+    // queries come from the same distribution (same centres) as the base set
+    let mut base = gen(n + nq, dim, seed);
+    let queries = base.split_off(n);
     write_fvecs(&out.join("base.fvecs"), &base).unwrap();
     write_fvecs(&out.join("query.fvecs"), &queries).unwrap();
     let rss0 = rss_bytes();
@@ -251,7 +284,7 @@ fn main() {
     // -------- PQ
     if !skip_pq {
         eprintln!("pq");
-        let pm = (1..=dim).rev().find(|d| dim % d == 0 && dim / d >= 4 && *d <= 32).unwrap_or(1);
+        let pm = (1..=dim).rev().find(|d| dim.is_multiple_of(*d) && dim / d >= 4 && *d <= 32).unwrap_or(1);
         let t0 = Instant::now();
         let st = c.train_pq(pm, 50_000).unwrap(); // also writes a snapshot
         let train_s = t0.elapsed().as_secs_f64();

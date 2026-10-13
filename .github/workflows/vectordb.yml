@@ -1,0 +1,31 @@
+name: vectordb
+on:
+  push:
+    paths: ["vectordb/**", ".github/workflows/vectordb.yml"]
+  pull_request:
+    paths: ["vectordb/**", ".github/workflows/vectordb.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: vectordb }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "clippy, rustfmt" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: vectordb }
+      - run: cargo build --locked --all-targets
+      - run: cargo test --locked
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      # small end-to-end benchmark run as a smoke test (not a performance gate)
+      - run: cargo run --locked --release --bin vdb-bench -- --out /tmp/bench --n 5000 --dim 32 --queries 200
+  msrv:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: vectordb }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89
+      - run: cargo build --locked

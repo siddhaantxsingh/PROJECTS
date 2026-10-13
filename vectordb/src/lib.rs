@@ -1,10 +1,11 @@
 //! vectordb — a persistent approximate nearest-neighbour search engine.
+#![allow(clippy::needless_range_loop)]
+pub mod collection;
 pub mod distance;
 pub mod filter;
 pub mod hnsw;
-pub mod store;
 pub mod pq;
-pub mod wal;
-pub mod snapshot;
-pub mod collection;
 pub mod server;
+pub mod snapshot;
+pub mod store;
+pub mod wal;

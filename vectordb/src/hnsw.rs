@@ -156,7 +156,7 @@ impl Hnsw {
         for &e in eps {
             if vis.insert(e.1) {
                 cands.push(Reverse(e));
-                if allow.map_or(true, |f| f(e.1)) {
+                if allow.is_none_or(|f| f(e.1)) {
                     res.push(e);
                 }
             }
@@ -175,7 +175,7 @@ impl Hnsw {
                 let d = store.distance(q, n);
                 if res.len() < ef || d < res.peek().unwrap().0 {
                     cands.push(Reverse(Cand(d, n)));
-                    if allow.map_or(true, |f| f(n)) {
+                    if allow.is_none_or(|f| f(n)) {
                         res.push(Cand(d, n));
                         if res.len() > ef {
                             res.pop();
@@ -320,7 +320,7 @@ impl Hnsw {
 pub fn exact_search(store: &VectorStore, q: &[f32], k: usize, allow: Allow) -> Vec<(f32, u32)> {
     let mut heap: BinaryHeap<Cand> = BinaryHeap::with_capacity(k + 1);
     for i in 0..store.len() as u32 {
-        if !allow.map_or(true, |f| f(i)) {
+        if !allow.is_none_or(|f| f(i)) {
             continue;
         }
         let d = store.distance(q, i);
@@ -402,7 +402,7 @@ mod tests {
         for i in 0..s.len() as u32 {
             h.insert(&s, i);
         }
-        let only_even = |i: u32| i % 2 == 0;
+        let only_even = |i: u32| i.is_multiple_of(2);
         let q = s.vector(1).to_vec();
         let r = h.search(&s, &q, 20, 64, Some(&only_even));
         assert_eq!(r.len(), 20);

@@ -269,7 +269,7 @@ mod tests {
             w.append(&recs()[0]).unwrap();
         }
         let mut b = std::fs::read(&p).unwrap();
-        b.extend(std::iter::repeat(0u8).take(4096));
+        b.extend(std::iter::repeat_n(0u8, 4096));
         std::fs::write(&p, &b).unwrap();
         let (_, r, rep) = Wal::open(&p, SyncMode::Never).unwrap();
         assert_eq!(r, recs()[..1].to_vec());

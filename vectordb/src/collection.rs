@@ -271,7 +271,7 @@ impl Collection {
         let q = inner.store.prepare(&req.vector)?;
         let store = &inner.store;
         let filt = req.filter.as_ref();
-        let allow = |i: u32| !store.deleted[i as usize] && filt.map_or(true, |f| store.metadata[i as usize].as_ref().is_some_and(|m| f.matches(m)));
+        let allow = |i: u32| !store.deleted[i as usize] && filt.is_none_or(|f| store.metadata[i as usize].as_ref().is_some_and(|m| f.matches(m)));
         let (res, plan) = match req.mode {
             Mode::Exact => (exact_search(store, &q, req.k, Some(&allow)), "exact".to_string()),
             Mode::Pq => {
@@ -291,10 +291,7 @@ impl Collection {
                 }
             },
         };
-        let hits = res
-            .into_iter()
-            .map(|(d, s)| Hit { id: store.ext_ids[s as usize], distance: d, metadata: store.metadata[s as usize].clone() })
-            .collect();
+        let hits = res.into_iter().map(|(d, s)| Hit { id: store.ext_ids[s as usize], distance: d, metadata: store.metadata[s as usize].clone() }).collect();
         self.queries.fetch_add(1, Ordering::Relaxed);
         Ok(SearchResponse { hits, plan, micros: t0.elapsed().as_micros() as u64 })
     }

@@ -66,9 +66,7 @@ impl Filter {
         match self {
             Filter::Eq(k, v) => m.get(k).is_some_and(|x| x.loosely_eq(v)),
             Filter::In(k, vs) => m.get(k).is_some_and(|x| vs.iter().any(|v| x.loosely_eq(v))),
-            Filter::Range(r) => m.get(&r.field).and_then(Value::as_f64).is_some_and(|x| {
-                r.gte.map_or(true, |g| x >= g) && r.lte.map_or(true, |l| x <= l)
-            }),
+            Filter::Range(r) => m.get(&r.field).and_then(Value::as_f64).is_some_and(|x| r.gte.is_none_or(|g| x >= g) && r.lte.is_none_or(|l| x <= l)),
             Filter::And(fs) => fs.iter().all(|f| f.matches(m)),
             Filter::Or(fs) => fs.iter().any(|f| f.matches(m)),
             Filter::Not(f) => !f.matches(m),

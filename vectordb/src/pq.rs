@@ -107,7 +107,7 @@ impl Pq {
     /// Trains codebooks on (a sample of up to `max_train`) live vectors and
     /// encodes every slot of the store.
     pub fn train(store: &VectorStore, m: usize, max_train: usize, iters: usize, seed: u64) -> Result<Pq, String> {
-        if m == 0 || store.dim % m != 0 {
+        if m == 0 || !store.dim.is_multiple_of(m) {
             return Err(format!("PQ needs m dividing the dimension ({} % {m} != 0)", store.dim));
         }
         let live: Vec<u32> = (0..store.len() as u32).filter(|&i| !store.deleted[i as usize]).collect();
@@ -213,7 +213,7 @@ impl Pq {
         let r = (k * rerank.max(1)).max(k);
         let mut heap: BinaryHeap<C> = BinaryHeap::with_capacity(r + 1);
         for i in 0..self.codes.len() / self.m {
-            if !allow.map_or(true, |f| f(i as u32)) {
+            if !allow.is_none_or(|f| f(i as u32)) {
                 continue;
             }
             let d = self.adc(&lut, i);
