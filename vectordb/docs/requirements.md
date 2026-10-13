@@ -23,7 +23,7 @@
 | FAISS comparison | VERIFIED | `benchmarks/faiss_baseline.py`, same fvecs and ground truth |
 | Real-world datasets (SIFT/GIST/embeddings) | NOT IMPLEMENTED | synthetic datasets only |
 | Adversarial audit | VERIFIED | docs/audit.md; fail-before log and commit |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/vectordb.yml`; see repo README for run status |
+| CI | VERIFIED | `.github/workflows/vectordb.yml` green on GitHub Actions (run 38478453681) |
 | Docker image | IMPLEMENTED BUT UNVERIFIED | Dockerfile not built (no Docker in the build environment) |
 | Authentication / TLS | NOT IMPLEMENTED | by design; see docs/security.md |
 | Replication / sharding | NOT IMPLEMENTED | out of scope |

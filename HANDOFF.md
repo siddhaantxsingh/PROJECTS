@@ -151,7 +151,7 @@ After those come the CPU-only parts of 8, 7 and 17, and then the consolidated 15
   - an admin demoting the last instructor leaves the course with no instructor.
 - **All repos:**
   - Dockerfiles were never built (Docker Hub is blocked);
-  - CI now runs on GitHub *(updated)*;
+  - CI runs on GitHub and is green for all three projects *(updated)*;
   - no LICENSE file (owner decision pending).
 
 ## Tests actually run (all in this sandbox) and results

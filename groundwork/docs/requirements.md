@@ -29,6 +29,6 @@
 | PostgreSQL + pgvector | VERIFIED | integration tests on PostgreSQL 16.15 + pgvector 0.6.0 |
 | Redis | VERIFIED | cache + rate limit tests, outage degradation test |
 | FastAPI service | VERIFIED | `test_api.py`, `scripts/demo.sh` log |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/ci.yml` not run on GitHub |
+| CI | VERIFIED | `../.github/workflows/groundwork.yml` green on GitHub Actions (run 38478453668) |
 | Container deployment | IMPLEMENTED BUT UNVERIFIED | Dockerfile/compose not built (Docker Hub blocked) |
 | LICENSE | BLOCKED | owner decision |

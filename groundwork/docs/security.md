@@ -24,4 +24,4 @@ The detector is a pattern list. It is defence in depth, not a boundary: an LLM p
 
 - No external penetration test; no fuzzing of pypdf beyond malformed-input tests.
 - No per-document ACLs inside a tenant (all members of a tenant key see all its documents).
-- Dependency audit (`pip-audit`) not run here; the CI workflow includes it but has not been executed on GitHub.
+- Dependency audit (`pip-audit`) runs in CI on GitHub Actions (passing as of run 38478453668).

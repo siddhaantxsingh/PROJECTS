@@ -25,5 +25,5 @@
 | Real users / engagement | NOT IMPLEMENTED | none exist; not fabricated |
 | LLM-generated answers | BLOCKED | no API key / model access in build environment |
 | Containerised deployment | IMPLEMENTED BUT UNVERIFIED | Dockerfile not built |
-| CI | IMPLEMENTED BUT UNVERIFIED | workflow not run on GitHub |
+| CI | VERIFIED | `../.github/workflows/campus-ai-os.yml` green on GitHub Actions (run 38478453632), incl. Playwright E2E |
 | LICENSE | BLOCKED | owner decision |
