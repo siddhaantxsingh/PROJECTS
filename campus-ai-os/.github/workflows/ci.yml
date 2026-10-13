@@ -1,0 +1,24 @@
+# Not executed on GitHub yet; the same steps were run locally.
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_HOST_AUTH_METHOD: trust }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: siddhaantxsingh/groundwork, path: groundwork }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: pip install -e groundwork -e 'backend[dev]'
+      - run: cd backend && pytest
+      - run: cd frontend && npm ci && npm run build && npx playwright install --with-deps chromium
+      - run: cd frontend && CHROMIUM_PATH=$(node -e "console.log(require('playwright').chromium.executablePath())") npx playwright test
