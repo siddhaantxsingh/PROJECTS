@@ -83,6 +83,11 @@ impl Registry {
         for e in std::fs::read_dir(&dir).map_err(|e| e.to_string())? {
             let e = e.map_err(|e| e.to_string())?;
             let name = e.file_name().to_string_lossy().to_string();
+            if name.starts_with(".dropped-") {
+                // a drop that crashed before deleting its renamed directory
+                let _ = std::fs::remove_dir_all(e.path());
+                continue;
+            }
             if !valid_name(&name) || !e.path().join("config.json").exists() {
                 continue;
             }
@@ -111,11 +116,22 @@ impl Registry {
         Ok(c)
     }
 
+    /// Unregisters the collection and deletes its directory. The directory is
+    /// first renamed to a hidden name while the registry lock is held, so a
+    /// concurrent `create` of the same name always starts a fresh directory
+    /// (it can never re-open the one being deleted). In-flight requests that
+    /// still hold the old handle finish against the renamed files.
     pub fn drop_collection(&self, name: &str) -> Result<(), ApiError> {
-        let c = self.cols.write().remove(name).ok_or_else(|| ApiError::NotFound(format!("collection '{name}' not found")))?;
-        let dir = c.dir.clone();
-        drop(c);
-        std::fs::remove_dir_all(dir).map_err(|e| ApiError::Internal(e.to_string()))
+        let doomed = {
+            let mut cols = self.cols.write();
+            let c = cols.get(name).cloned().ok_or_else(|| ApiError::NotFound(format!("collection '{name}' not found")))?;
+            let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos());
+            let doomed = self.dir.join(format!(".dropped-{name}-{nanos}"));
+            std::fs::rename(&c.dir, &doomed).map_err(|e| ApiError::Internal(e.to_string()))?;
+            cols.remove(name);
+            doomed
+        };
+        std::fs::remove_dir_all(doomed).map_err(|e| ApiError::Internal(e.to_string()))
     }
 
     pub fn observe(&self, micros: u64) {
@@ -185,12 +201,10 @@ pub fn router(reg: Arc<Registry>) -> Router {
                 if points.len() > 10_000 {
                     return Err(ApiError::Bad("at most 10000 points per request".into()));
                 }
+                let n = points.len();
                 blocking(move || {
-                    let mut lsn = 0;
-                    for p in &points {
-                        lsn = c.upsert(p.id, &p.vector, p.metadata.clone())?;
-                    }
-                    Ok(Json(serde_json::json!({ "upserted": points.len(), "lsn": lsn })))
+                    let lsn = c.upsert_batch(points.into_iter().map(|p| (p.id, p.vector, p.metadata)).collect())?;
+                    Ok(Json(serde_json::json!({ "upserted": n, "lsn": lsn })))
                 })
                 .await
             }),
@@ -249,6 +263,14 @@ pub fn router(reg: Arc<Registry>) -> Router {
 
 pub struct Grpc(pub Arc<Registry>);
 
+/// Largest gRPC request or response message (same as the REST body limit).
+pub const GRPC_MAX_MESSAGE: usize = 64 << 20;
+
+/// The gRPC service with message-size limits applied in both directions.
+pub fn grpc_service(reg: Arc<Registry>) -> pb::vector_db_server::VectorDbServer<Grpc> {
+    pb::vector_db_server::VectorDbServer::new(Grpc(reg)).max_decoding_message_size(GRPC_MAX_MESSAGE).max_encoding_message_size(GRPC_MAX_MESSAGE)
+}
+
 fn status(e: ApiError) -> tonic::Status {
     match e {
         ApiError::NotFound(m) => tonic::Status::not_found(m),
@@ -273,15 +295,10 @@ impl pb::vector_db_server::VectorDb for Grpc {
         let pts: Vec<(u64, Vec<f32>, Option<Metadata>)> =
             r.points.into_iter().map(|p| Ok((p.id, p.vector, parse_json(&p.metadata_json, "metadata")?))).collect::<Result<_, tonic::Status>>()?;
         let n = pts.len() as u32;
-        let lsn = blocking(move || {
-            let mut lsn = 0;
-            for (id, v, m) in pts {
-                lsn = c.upsert(id, &v, m)?;
-            }
-            Ok(lsn)
-        })
-        .await
-        .map_err(status)?;
+        if pts.len() > 10_000 {
+            return Err(tonic::Status::invalid_argument("at most 10000 points per request"));
+        }
+        let lsn = blocking(move || Ok(c.upsert_batch(pts)?)).await.map_err(status)?;
         Ok(tonic::Response::new(pb::UpsertResponse { lsn, upserted: n }))
     }
 

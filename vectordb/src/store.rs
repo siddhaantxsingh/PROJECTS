@@ -3,7 +3,7 @@
 //! vector so graph navigation through it still works until a rebuild
 //! compacts the store.
 
-use crate::distance::{normalize, Metric};
+use crate::distance::{dot_scalar, normalize, Metric};
 use crate::filter::Metadata;
 use std::collections::HashMap;
 
@@ -27,6 +27,8 @@ pub enum StoreError {
     NonFinite,
     #[error("zero vector cannot be normalised for cosine similarity")]
     ZeroVector,
+    #[error("vector magnitude too large: distances would overflow f32")]
+    TooLarge,
     #[error("collection is full (2^32 - 1 slots)")]
     Full,
 }
@@ -60,8 +62,13 @@ impl VectorStore {
             return Err(StoreError::NonFinite);
         }
         let mut out = v.to_vec();
-        if self.metric == Metric::Cosine && !normalize(&mut out) {
-            return Err(StoreError::ZeroVector);
+        if self.metric == Metric::Cosine {
+            if !normalize(&mut out) {
+                return Err(StoreError::ZeroVector);
+            }
+        } else if !(dot_scalar(&out, &out) * 4.0).is_finite() {
+            // L2 / inner-product distances between such vectors overflow f32
+            return Err(StoreError::TooLarge);
         }
         Ok(out)
     }

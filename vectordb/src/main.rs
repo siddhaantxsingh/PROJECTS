@@ -1,7 +1,7 @@
 //! `vectordb serve --data DIR [--http ADDR] [--grpc ADDR] [--sync always|never]`
 //! `vectordb check --data DIR`   verify every collection's invariants after recovery
 use std::sync::Arc;
-use vectordb::server::{pb::vector_db_server::VectorDbServer, router, Grpc, Registry};
+use vectordb::server::{grpc_service, router, Registry};
 use vectordb::wal::SyncMode;
 
 fn arg(args: &[String], name: &str, default: &str) -> String {
@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let reg = Registry::open(data.into(), sync)?;
             let http: std::net::SocketAddr = arg(&args, "--http", "127.0.0.1:6333").parse()?;
             let grpc: std::net::SocketAddr = arg(&args, "--grpc", "127.0.0.1:6334").parse()?;
-            let g = tonic::transport::Server::builder().add_service(VectorDbServer::new(Grpc(Arc::clone(&reg)))).serve_with_shutdown(grpc, shutdown());
+            let g = tonic::transport::Server::builder().add_service(grpc_service(Arc::clone(&reg))).serve_with_shutdown(grpc, shutdown());
             let listener = tokio::net::TcpListener::bind(http).await?;
             tracing::info!(%http, %grpc, "listening");
             let h = axum::serve(listener, router(Arc::clone(&reg))).with_graceful_shutdown(shutdown());

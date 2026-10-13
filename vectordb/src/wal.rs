@@ -110,10 +110,26 @@ fn decode_payload(p: &[u8]) -> Result<Record, String> {
     Ok(Record { lsn, op })
 }
 
+/// First offset `>= from` at which a complete, checksummed, decodable record
+/// starts. Only used on the (rare) torn-tail path during recovery.
+fn later_valid_record(data: &[u8], from: usize) -> Option<usize> {
+    const MIN_PAYLOAD: usize = 8 + 1 + 8; // lsn, op, ext id
+    (from..data.len().saturating_sub(8 + MIN_PAYLOAD - 1)).find(|&p| {
+        let len = u32::from_le_bytes(data[p..p + 4].try_into().unwrap()) as usize;
+        let end = p + 8 + len;
+        len >= MIN_PAYLOAD
+            && len <= MAX_RECORD as usize
+            && end <= data.len()
+            && crc32fast::hash(&data[p + 8..end]) == u32::from_le_bytes(data[p + 4..p + 8].try_into().unwrap())
+            && decode_payload(&data[p + 8..end]).is_ok()
+    })
+}
+
 pub struct Wal {
     file: File,
     sync: SyncMode,
     pub bytes: u64,
+    failed: bool,
 }
 
 impl Wal {
@@ -133,7 +149,7 @@ impl Wal {
             file.seek(SeekFrom::Start(0))?;
             file.write_all(MAGIC)?;
             file.sync_all()?;
-            return Ok((Wal { file, sync, bytes: MAGIC.len() as u64 }, Vec::new(), data.len() as u64));
+            return Ok((Wal { file, sync, bytes: MAGIC.len() as u64, failed: false }, Vec::new(), data.len() as u64));
         }
         if &data[..8] != MAGIC {
             return Err(WalError::Corrupt(0, "bad magic".into()));
@@ -154,6 +170,13 @@ impl Wal {
             }
             let end = off + 8 + len as usize;
             if end > data.len() {
+                // Either a torn final write, or a corrupted length field in the
+                // middle of the log. Appends are whole records, so a torn write
+                // is never followed by a complete record: if one exists later,
+                // this is corruption and acknowledged records would be lost.
+                if let Some(p) = later_valid_record(&data, off + 1) {
+                    return Err(WalError::Corrupt(off as u64, format!("record length {len} runs past end of file, but a valid record follows at offset {p}")));
+                }
                 break; // torn payload
             }
             let payload = &data[off + 8..end];
@@ -175,14 +198,26 @@ impl Wal {
             file.sync_all()?;
         }
         file.seek(SeekFrom::Start(off as u64))?;
-        Ok((Wal { file, sync, bytes: off as u64 }, recs, repaired))
+        Ok((Wal { file, sync, bytes: off as u64, failed: false }, recs, repaired))
     }
 
+    /// Appends one record. On any failure (short write, ENOSPC, failed
+    /// fsync) the file is cut back to the last complete record, so a failed
+    /// (unacknowledged) write can neither leave a fragment that later appends
+    /// land behind nor be replayed after a restart. If even the rollback fails
+    /// the log refuses all further writes.
     pub fn append(&mut self, r: &Record) -> Result<(), WalError> {
+        if self.failed {
+            return Err(WalError::Io(std::io::Error::other("write-ahead log is unusable after an unrecoverable I/O error; restart to recover")));
+        }
         let buf = encode(r);
-        self.file.write_all(&buf)?;
-        if self.sync == SyncMode::Always {
-            self.file.sync_data()?;
+        let res = self.file.write_all(&buf).and_then(|_| if self.sync == SyncMode::Always { self.file.sync_data() } else { Ok(()) });
+        if let Err(e) = res {
+            let rollback = self.file.set_len(self.bytes).and_then(|_| self.file.seek(SeekFrom::Start(self.bytes)).map(|_| ()));
+            if rollback.is_err() {
+                self.failed = true;
+            }
+            return Err(e.into());
         }
         self.bytes += buf.len() as u64;
         Ok(())

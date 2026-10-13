@@ -3,8 +3,7 @@ use serde_json::{json, Value};
 use std::future::IntoFuture;
 use std::sync::Arc;
 use vectordb::server::pb::vector_db_client::VectorDbClient;
-use vectordb::server::pb::vector_db_server::VectorDbServer;
-use vectordb::server::{pb, router, Grpc, Registry};
+use vectordb::server::{grpc_service, pb, router, Registry};
 use vectordb::wal::SyncMode;
 
 struct Running {
@@ -36,7 +35,7 @@ async fn start(dir: &std::path::Path) -> Running {
     let h = axum::serve(l, router(Arc::clone(&reg))).with_graceful_shutdown(wait(rx.clone())).into_future();
     let gl = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let grpc = format!("http://{}", gl.local_addr().unwrap());
-    let g = tonic::transport::Server::builder().add_service(VectorDbServer::new(Grpc(reg))).serve_with_incoming_shutdown(async_stream_listener(gl), wait(rx));
+    let g = tonic::transport::Server::builder().add_service(grpc_service(reg)).serve_with_incoming_shutdown(async_stream_listener(gl), wait(rx));
     let tasks = vec![tokio::spawn(async move { h.await.unwrap() }), tokio::spawn(async move { g.await.unwrap() })];
     Running { http, grpc, stop: tx, tasks }
 }

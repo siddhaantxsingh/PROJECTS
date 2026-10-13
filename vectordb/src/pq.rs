@@ -114,6 +114,9 @@ impl Pq {
         if live.len() < 2 {
             return Err("PQ needs at least 2 vectors to train".into());
         }
+        if max_train < 2 {
+            return Err("max_train must be at least 2".into());
+        }
         let mut rng = SmallRng::seed_from_u64(seed);
         let mut sample = live.clone();
         if sample.len() > max_train {

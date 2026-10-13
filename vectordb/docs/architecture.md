@@ -20,7 +20,7 @@
 | Module | Responsibility |
 |---|---|
 | `distance.rs` | L2 (squared), inner product (negated) and cosine distances. Scalar reference kernels plus AVX2+FMA kernels selected at runtime (`is_x86_feature_detected!`). Cosine vectors are normalised on insert, so cosine reduces to `1 - dot`. |
-| `filter.rs` | Flat metadata (`string → bool / int / float / string`) and a filter algebra (`eq`, `in`, `range`, `and`, `or`, `not`) with depth (16) and node (256) limits. |
+| `filter.rs` | Flat metadata (`string → bool / int / float / string`) and a filter algebra (`eq`, `in`, `range`, `and`, `or`, `not`) with a depth limit (16), at most 1024 values per `in` list, and a budget of 2048 nodes plus `in` values per filter. |
 | `store.rs` | Dense `u32` slots holding vectors, caller-chosen `u64` external ids, tombstones and metadata. Upserting an existing id tombstones the old slot and appends a new one. |
 | `hnsw.rs` | HNSW from scratch: random levels with `mL = 1/ln M`, greedy descent, beam search with `ef_construction`, the paper's neighbour-selection heuristic with `keepPrunedConnections`, `2M` links on layer 0. Filters are applied **inside** the beam search. `check_invariants` validates the graph. Also brute-force `exact_search`. |
 | `pq.rs` | Product quantization: `m` sub-spaces × up to 256 centroids, k-means++ seeding and Lloyd iterations with a fixed seed, ADC lookup tables, exact rerank of the best `k × rerank` candidates. |

@@ -1,7 +1,7 @@
 //! Regression tests for defects found by the adversarial audit (docs/audit.md).
 use std::sync::Arc;
 use std::time::Duration;
-use vectordb::collection::{Collection, Config, Error, Mode, SearchRequest};
+use vectordb::collection::{Collection, Config, Error};
 use vectordb::distance::Metric;
 use vectordb::server::Registry;
 use vectordb::wal::SyncMode;
@@ -119,4 +119,30 @@ fn drop_racing_create_does_not_lose_a_live_collection() {
             let _ = reg.drop_collection("x");
         }
     }
+}
+
+/// Suspected issue S5, fixed with the audit: a batch with one invalid point
+/// must not leave the valid points before it applied.
+#[test]
+fn batch_upsert_is_all_or_nothing_on_validation_errors() {
+    let d = tempfile::tempdir().unwrap();
+    let c = Collection::open(d.path(), cfg(2), SyncMode::Never).unwrap();
+    let pts = vec![(1, vec![1.0, 0.0], None), (2, vec![0.0, 1.0], None), (3, vec![f32::NAN, 0.0], None)];
+    match c.upsert_batch(pts) {
+        Err(Error::BadRequest(m)) => assert!(m.contains("point 2"), "{m}"),
+        other => panic!("expected BadRequest, got {other:?}"),
+    }
+    assert_eq!(c.stats().live, 0);
+    assert_eq!(c.stats().lsn, 0);
+    c.upsert_batch(vec![(1, vec![1.0, 0.0], None), (2, vec![0.0, 1.0], None)]).unwrap();
+    assert_eq!(c.stats().live, 2);
+}
+
+/// S8: vectors whose distances would overflow f32 are rejected for L2 / IP.
+#[test]
+fn huge_vectors_are_rejected_for_l2() {
+    let d = tempfile::tempdir().unwrap();
+    let c = Collection::open(d.path(), cfg(2), SyncMode::Never).unwrap();
+    assert!(c.upsert(1, &[1e30, 1e30], None).is_err());
+    c.upsert(1, &[1e10, 1e10], None).unwrap();
 }

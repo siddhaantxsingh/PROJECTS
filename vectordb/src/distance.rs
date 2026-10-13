@@ -100,7 +100,17 @@ pub fn kernel_name() -> &'static str {
     "scalar"
 }
 
+/// L2-normalises `v` in place; false for a zero (or non-finite) vector.
+/// Scales by the largest magnitude first, so a finite vector whose squared
+/// norm would overflow f32 still normalises correctly.
 pub fn normalize(v: &mut [f32]) -> bool {
+    let scale = v.iter().fold(0.0f32, |a, x| a.max(x.abs()));
+    if scale == 0.0 || !scale.is_finite() {
+        return false;
+    }
+    for x in v.iter_mut() {
+        *x /= scale;
+    }
     let n = dot_scalar(v, v).sqrt();
     if n == 0.0 || !n.is_finite() {
         return false;

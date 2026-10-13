@@ -1,0 +1,29 @@
+# Requirements matrix — Project 6 (Vector DB)
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| ANN index (HNSW) from scratch | VERIFIED | `hnsw.rs`; invariant checker; recall vs exact in unit tests and benchmarks; within 0.00–0.04 recall of FAISS IndexHNSWFlat at equal parameters |
+| Exact search | VERIFIED | `exact_search`; used as ground truth |
+| Distance metrics L2 / IP / cosine | VERIFIED | `distance.rs` tests |
+| SIMD distance kernels | VERIFIED | AVX2+FMA vs scalar on every length 0..300 |
+| Product quantization | VERIFIED | `pq.rs` tests; benchmark recall/memory (15.4× compression) |
+| Metadata filtering | VERIFIED | in-search filtering; proptest contract; benchmark at 50/10/1 % |
+| Query planner (filter selectivity) | VERIFIED (fixed threshold) | plan reported in every response; not cost-based |
+| Deletes / upserts / compaction | VERIFIED | tombstones; `rebuild`; tests |
+| Write-ahead log | VERIFIED | crash at every WAL byte; mid-log corruption (incl. length fields) fails the open |
+| Snapshots + recovery | VERIFIED | identical results after recovery (tests + benchmark); corrupt snapshot fails the open |
+| fsync on failure paths | IMPLEMENTED BUT UNVERIFIED | append rollback on I/O error; no fault-injection test |
+| Concurrency (concurrent reads, safe writes) | VERIFIED | concurrent readers/writers test; lock-order deadlock found and fixed; directory lock |
+| REST API | VERIFIED | `tests/api.rs` against a real server |
+| gRPC API | VERIFIED | `tests/api.rs` round trip + error codes |
+| Metrics | VERIFIED | `/metrics` asserted in API test |
+| Graceful shutdown | VERIFIED | test shuts servers down and restarts on the same data; manual SIGTERM run |
+| Input validation / DoS limits | VERIFIED | audit regression tests; limits in docs/security.md |
+| Benchmarks (recall, QPS, latency percentiles, memory, filtered, PQ, durability) | VERIFIED | `vdb-bench`; `benchmarks/results/2026-10-13/`; docs/benchmarks.md |
+| FAISS comparison | VERIFIED | `benchmarks/faiss_baseline.py`, same fvecs and ground truth |
+| Real-world datasets (SIFT/GIST/embeddings) | NOT IMPLEMENTED | synthetic datasets only |
+| Adversarial audit | VERIFIED | docs/audit.md; fail-before log and commit |
+| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/vectordb.yml`; see repo README for run status |
+| Docker image | IMPLEMENTED BUT UNVERIFIED | Dockerfile not built (no Docker in the build environment) |
+| Authentication / TLS | NOT IMPLEMENTED | by design; see docs/security.md |
+| Replication / sharding | NOT IMPLEMENTED | out of scope |

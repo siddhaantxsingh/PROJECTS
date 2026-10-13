@@ -59,7 +59,9 @@ pub struct Range {
 }
 
 pub const MAX_FILTER_DEPTH: usize = 16;
-pub const MAX_FILTER_NODES: usize = 256;
+/// Budget for filter nodes plus `in` values together.
+pub const MAX_FILTER_NODES: usize = 2048;
+pub const MAX_IN_VALUES: usize = 1024;
 
 impl Filter {
     pub fn matches(&self, m: &Metadata) -> bool {
@@ -76,18 +78,25 @@ impl Filter {
     /// Rejects filters that are too deep or too large to evaluate cheaply
     /// per candidate (a resource-exhaustion guard for the public API).
     pub fn validate(&self) -> Result<(), String> {
+        // `nodes` counts filter nodes plus every value of every `in` list, so the
+        // per-candidate evaluation cost is bounded as a whole.
         fn walk(f: &Filter, depth: usize, nodes: &mut usize) -> Result<(), String> {
             *nodes += 1;
+            if let Filter::In(_, vs) = f {
+                if vs.len() > MAX_IN_VALUES {
+                    return Err(format!("'in' list longer than {MAX_IN_VALUES}"));
+                }
+                *nodes += vs.len();
+            }
             if depth > MAX_FILTER_DEPTH {
                 return Err(format!("filter nesting deeper than {MAX_FILTER_DEPTH}"));
             }
             if *nodes > MAX_FILTER_NODES {
-                return Err(format!("filter has more than {MAX_FILTER_NODES} nodes"));
+                return Err(format!("filter has more than {MAX_FILTER_NODES} nodes and 'in' values"));
             }
             match f {
                 Filter::And(fs) | Filter::Or(fs) => fs.iter().try_for_each(|x| walk(x, depth + 1, nodes)),
                 Filter::Not(x) => walk(x, depth + 1, nodes),
-                Filter::In(_, vs) if vs.len() > 1024 => Err("'in' list longer than 1024".into()),
                 _ => Ok(()),
             }
         }
@@ -130,6 +139,10 @@ mod tests {
             f = Filter::Not(Box::new(f));
         }
         assert!(f.validate().is_err());
-        assert!(Filter::Or(vec![Filter::Eq("a".into(), Value::Int(1)); 300]).validate().is_err());
+        assert!(Filter::Or(vec![Filter::Eq("a".into(), Value::Int(1)); 3000]).validate().is_err());
+        let big_in = Filter::In("a".into(), vec![Value::Int(1); 1000]);
+        assert!(big_in.validate().is_ok());
+        assert!(Filter::Or(vec![big_in; 3]).validate().is_err()); // 3000 values in total
+        assert!(Filter::In("a".into(), vec![Value::Int(1); 1025]).validate().is_err());
     }
 }

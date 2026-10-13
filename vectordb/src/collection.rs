@@ -148,6 +148,9 @@ pub struct RecoveryReport {
 
 pub const MAX_K: usize = 10_000;
 pub const MAX_EF: usize = 10_000;
+/// Upper bounds for PQ re-ranking: `rerank` factor and `k * rerank` candidates.
+pub const MAX_RERANK: usize = 1_000;
+pub const MAX_RERANK_CANDIDATES: usize = 100_000;
 /// Below this estimated filter selectivity, filtered queries scan exactly.
 pub const EXACT_FALLBACK_SELECTIVITY: f64 = 0.02;
 
@@ -182,6 +185,10 @@ impl Collection {
                 std::fs::File::open(&tmp)?.sync_all()?;
                 std::fs::rename(&tmp, &cfg_path)?;
                 std::fs::File::open(dir)?.sync_all()?;
+                // make the new collection directory's own entry durable too
+                if let Some(parent) = dir.parent().filter(|p| !p.as_os_str().is_empty()) {
+                    std::fs::File::open(parent)?.sync_all()?;
+                }
             }
             Err(e) => return Err(e.into()),
         }
@@ -230,15 +237,39 @@ impl Collection {
         Ok(lsn)
     }
 
-    pub fn upsert(&self, id: u64, vector: &[f32], meta: Option<Metadata>) -> Result<u64, Error> {
-        // Validate BEFORE logging, so an invalid request never reaches the WAL.
+    /// Validates (and for cosine normalises) one point without writing it.
+    fn prepare(&self, vector: &[f32], meta: &Option<Metadata>) -> Result<Vec<f32>, Error> {
         let v = self.inner.read().store.prepare(vector)?;
-        if let Some(m) = &meta {
+        if let Some(m) = meta {
             if serde_json::to_vec(m).map(|b| b.len()).unwrap_or(usize::MAX) > 64 * 1024 {
                 return Err(Error::BadRequest("metadata larger than 64 KiB".into()));
             }
         }
+        Ok(v)
+    }
+
+    pub fn upsert(&self, id: u64, vector: &[f32], meta: Option<Metadata>) -> Result<u64, Error> {
+        // Validate BEFORE logging, so an invalid request never reaches the WAL.
+        let v = self.prepare(vector, &meta)?;
         self.write(Op::Upsert { ext: id, vector: v, meta })
+    }
+
+    /// Upserts a batch. Every point is validated before any is written, so an
+    /// invalid point rejects the whole batch with nothing applied; the error
+    /// names the index of the offending point. (An I/O error part-way through
+    /// can still leave a prefix applied; each applied point is durable.)
+    /// Returns the LSN of the last write (the current LSN for an empty batch).
+    pub fn upsert_batch(&self, points: Vec<(u64, Vec<f32>, Option<Metadata>)>) -> Result<u64, Error> {
+        let mut ops = Vec::with_capacity(points.len());
+        for (i, (id, v, meta)) in points.into_iter().enumerate() {
+            let v = self.prepare(&v, &meta).map_err(|e| Error::BadRequest(format!("point {i} (id {id}): {e}")))?;
+            ops.push(Op::Upsert { ext: id, vector: v, meta });
+        }
+        let mut lsn = self.inner.read().lsn;
+        for op in ops {
+            lsn = self.write(op)?;
+        }
+        Ok(lsn)
     }
 
     pub fn delete(&self, id: u64) -> Result<bool, Error> {
@@ -266,6 +297,11 @@ impl Collection {
         }
         if let Some(f) = &req.filter {
             f.validate().map_err(Error::BadRequest)?;
+        }
+        if let Some(r) = req.rerank {
+            if r == 0 || r > MAX_RERANK || req.k * r > MAX_RERANK_CANDIDATES {
+                return Err(Error::BadRequest(format!("rerank must be 1..{MAX_RERANK} and k * rerank at most {MAX_RERANK_CANDIDATES}")));
+            }
         }
         let inner = self.inner.read();
         let q = inner.store.prepare(&req.vector)?;
@@ -352,6 +388,9 @@ impl Collection {
     }
 
     pub fn stats(&self) -> Stats {
+        // Lock order everywhere is wal -> inner; read the WAL size first and
+        // release it (taking it while holding `inner` deadlocked with `write`).
+        let wal_bytes = self.wal.lock().bytes;
         let inner = self.inner.read();
         Stats {
             dim: inner.store.dim,
@@ -360,7 +399,7 @@ impl Collection {
             slots: inner.store.len(),
             deleted_fraction: inner.store.deleted_fraction(),
             lsn: inner.lsn,
-            wal_bytes: self.wal.lock().bytes,
+            wal_bytes,
             hnsw_max_level: inner.hnsw.max_level,
             pq: inner.pq.as_ref().map(|p| (p.m, p.ksub)),
             vector_bytes: inner.store.data.len() * 4,
