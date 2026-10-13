@@ -1,0 +1,124 @@
+
+11. Printing statistics.
+
+=== rv_alu ===
+
+   Number of wires:               2013
+   Number of wire bits:           3044
+   Number of public wires:        2013
+   Number of public wire bits:    3044
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               2274
+     CCU2C                          48
+     L6MUX21                       313
+     LUT4                         1304
+     PFUMX                         609
+
+=== rv_branch ===
+
+   Number of wires:                 43
+   Number of wire bits:            265
+   Number of public wires:          43
+   Number of public wire bits:     265
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 83
+     CCU2C                          32
+     L6MUX21                         3
+     LUT4                           38
+     PFUMX                          10
+
+=== rv_core ===
+
+   Number of wires:               4988
+   Number of wire bits:          12270
+   Number of public wires:        4988
+   Number of public wire bits:   12270
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               7487
+     CCU2C                         247
+     L6MUX21                       314
+     LUT4                         4293
+     PFUMX                        1029
+     TRELLIS_DPR16X4                92
+     TRELLIS_FF                   1507
+     rv_alu                          1
+     rv_branch                       1
+     rv_decode                       1
+     rv_div                          1
+     rv_mul                          1
+
+=== rv_decode ===
+
+   Number of wires:                223
+   Number of wire bits:            567
+   Number of public wires:         223
+   Number of public wire bits:     567
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                267
+     L6MUX21                        26
+     LUT4                          191
+     PFUMX                          50
+
+=== rv_div ===
+
+   Number of wires:                514
+   Number of wire bits:           1514
+   Number of public wires:         514
+   Number of public wire bits:    1514
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                788
+     CCU2C                          84
+     L6MUX21                        15
+     LUT4                          488
+     PFUMX                          61
+     TRELLIS_FF                    140
+
+=== rv_mul ===
+
+   Number of wires:                 23
+   Number of wire bits:            795
+   Number of public wires:          23
+   Number of public wire bits:     795
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 92
+     CCU2C                          54
+     LUT4                           34
+     MULT18X18D                      4
+
+=== design hierarchy ===
+
+   rv_core                           1
+     rv_alu                          1
+     rv_branch                       1
+     rv_decode                       1
+     rv_div                          1
+     rv_mul                          1
+
+   Number of wires:               7804
+   Number of wire bits:          18455
+   Number of public wires:        7804
+   Number of public wire bits:   18455
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:              10986
+     CCU2C                         465
+     L6MUX21                       671
+     LUT4                         6348
+     MULT18X18D                      4
+     PFUMX                        1759
+     TRELLIS_DPR16X4                92
+     TRELLIS_FF                   1647
+

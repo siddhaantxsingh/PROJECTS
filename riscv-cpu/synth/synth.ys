@@ -1,0 +1,10 @@
+# Generic and FPGA-mapped synthesis of rv_core (no timing: no liberty file /
+# place-and-route tools are used; see docs/synthesis.md).
+read_verilog -sv rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv
+hierarchy -check -top rv_core
+synth -top rv_core -flatten
+tee -o build/synth_generic.txt stat
+design -reset
+read_verilog -sv rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv
+synth_ecp5 -top rv_core -noflatten
+tee -o build/synth_ecp5.txt stat
