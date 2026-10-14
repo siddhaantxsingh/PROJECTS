@@ -30,7 +30,7 @@ Projects still being built (in build order):
 | Nebula GPU cloud | [`nebula-gpu-cloud/`](nebula-gpu-cloud/) | Rust (axum, tokio) | Done (simulated GPUs): topology-aware gang scheduling, fair share, backfill, preemption; crash-safe state |
 | CUDA kernels | [`cuda-kernels/`](cuda-kernels/) | CUDA C++, clang + ptxas, CPU SIMT emulator | Done (no GPU: functional on emulator, compiled for sm_80/sm_90; GPU timing BLOCKED) |
 | LLM inference engine | [`llm-inference-engine/`](llm-inference-engine/) | Rust (CPU, AVX2), JAX training | Done: paged KV, continuous batching (3.1×), prefix cache, int8, speculative decoding; model trained here |
-| InferX | [`inferx/`](inferx/) | | Not started |
+| InferX | [`inferx/`](inferx/) | Go (stdlib) | Done: KV-cache-aware routing (1.68× vs round robin on real engines), admission control, autoscaling of engine processes |
 | MCP Fabric | [`mcp-fabric/`](mcp-fabric/) | Java 21, Spring Boot 3 | Done: MCP gateway federating stdio/HTTP servers; authz, schema validation, rate limits, circuit breakers, hash-chained audit |
 | EvalOps | [`evalops/`](evalops/) | Java 21, Spring Boot 3, H2 | Done: versioned datasets, eval runs, paired bootstrap comparisons, CI gates; evaluates llm-inference-engine |
 | UVM SoC verification | [`uvm-soc-verification/`](uvm-soc-verification/) | SystemVerilog RTL, pyuvm, cocotb, Verilator | Done: 100 % functional coverage, 12/12 injected bugs caught |
