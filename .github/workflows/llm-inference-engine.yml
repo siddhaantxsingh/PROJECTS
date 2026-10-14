@@ -1,0 +1,23 @@
+name: llm-inference-engine
+on:
+  push:
+    paths: ["llm-inference-engine/**", ".github/workflows/llm-inference-engine.yml"]
+  pull_request:
+    paths: ["llm-inference-engine/**", ".github/workflows/llm-inference-engine.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: llm-inference-engine }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "clippy, rustfmt" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: llm-inference-engine }
+      - run: cargo build --locked --release --all-targets
+      - run: cargo test --locked --release
+      # the portable (non-SIMD) kernels must give the same answers
+      - run: LLM_NO_SIMD=1 cargo test --locked --release --test engine
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --release --all-targets -- -D warnings

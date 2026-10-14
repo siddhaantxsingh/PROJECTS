@@ -29,7 +29,7 @@ Projects still being built (in build order):
 | INT8/FP8 accelerator | [`int8-fp8-accelerator/`](int8-fp8-accelerator/) | SystemVerilog, cocotb | Done (simulation): bit-exact INT8/FP8 GEMM, exact FP8 accumulation |
 | Nebula GPU cloud | [`nebula-gpu-cloud/`](nebula-gpu-cloud/) | Rust (axum, tokio) | Done (simulated GPUs): topology-aware gang scheduling, fair share, backfill, preemption; crash-safe state |
 | CUDA kernels | [`cuda-kernels/`](cuda-kernels/) | CUDA C++, clang + ptxas, CPU SIMT emulator | Done (no GPU: functional on emulator, compiled for sm_80/sm_90; GPU timing BLOCKED) |
-| LLM inference engine | [`llm-inference-engine/`](llm-inference-engine/) | | Not started |
+| LLM inference engine | [`llm-inference-engine/`](llm-inference-engine/) | Rust (CPU, AVX2), JAX training | Done: paged KV, continuous batching (3.1×), prefix cache, int8, speculative decoding; model trained here |
 | InferX | [`inferx/`](inferx/) | | Not started |
 | MCP Fabric | [`mcp-fabric/`](mcp-fabric/) | Java / Spring | Not started (Maven is reachable now) |
 | EvalOps | [`evalops/`](evalops/) | Java / Spring | Not started (Maven is reachable now) |
