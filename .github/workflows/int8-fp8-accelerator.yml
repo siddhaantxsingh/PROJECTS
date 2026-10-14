@@ -1,0 +1,22 @@
+name: int8-fp8-accelerator
+on:
+  push:
+    paths: ["int8-fp8-accelerator/**", ".github/workflows/int8-fp8-accelerator.yml"]
+  pull_request:
+    paths: ["int8-fp8-accelerator/**", ".github/workflows/int8-fp8-accelerator.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: int8-fp8-accelerator }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: sudo apt-get update && sudo apt-get install -y verilator yosys
+      - run: pip install cocotb==1.9.2 numpy pytest
+      - run: make lint
+      - run: make model-test
+      - run: make test
+      - run: make test-n4
+      - run: make synth
