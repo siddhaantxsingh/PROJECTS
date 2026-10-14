@@ -1,17 +1,17 @@
 // edgebench: reproducible measurements for docs/benchmarks.md.
 //
-//	edgebench -out bench/results/DATE [-broker 127.0.0.1:1883] [-seconds 20]
+//		edgebench -out bench/results/DATE [-broker 127.0.0.1:1883] [-seconds 20]
 //
-//  1. compression: one simulated hour of the tank process sampled at 10 Hz;
-//     swinging door and deadband at several deviations; reduction ratio and
-//     the measured maximum reconstruction error.
-//  2. queue: append throughput of 150-byte records with fsync per record,
-//     group commit every 100 ms, and no fsync; recovery (open) time.
-//  3. pipeline (needs a broker): 20 simulated PLCs x 50 float32 tags polled
-//     every 100 ms (10,000 samples/s) through the full gateway into MQTT; a
-//     subscriber measures delivered records/s and end-to-end latency
-//     (receive time - sample time), and the gateway's CPU use is read from
-//     /proc/self/stat.
+//	 1. compression: one simulated hour of the tank process sampled at 10 Hz;
+//	    swinging door and deadband at several deviations; reduction ratio and
+//	    the measured maximum reconstruction error.
+//	 2. queue: append throughput of 150-byte records with fsync per record,
+//	    group commit every 100 ms, and no fsync; recovery (open) time.
+//	 3. pipeline (needs a broker): 20 simulated PLCs x 50 float32 tags polled
+//	    every 100 ms (10,000 samples/s) through the full gateway into MQTT; a
+//	    subscriber measures delivered records/s and end-to-end latency
+//	    (receive time - sample time), and the gateway's CPU use is read from
+//	    /proc/self/stat.
 package main
 
 import (
