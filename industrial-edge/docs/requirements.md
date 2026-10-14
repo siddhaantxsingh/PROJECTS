@@ -16,4 +16,4 @@
 | Security (TLS, authentication) | NOT IMPLEMENTED | documented |
 | OPC UA, Modbus RTU, other protocols | NOT IMPLEMENTED | — |
 | Docker / deployment | NOT IMPLEMENTED | — |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/industrial-edge.yml` |
+| CI | VERIFIED | `.github/workflows/industrial-edge.yml` green on GitHub Actions (run 38516430120), including e2e with mosquitto |
