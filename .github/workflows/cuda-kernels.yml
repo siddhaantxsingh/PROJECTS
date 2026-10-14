@@ -20,7 +20,7 @@ jobs:
       run: { working-directory: cuda-kernels }
     steps:
       - uses: actions/checkout@v4
-      - run: clang++ --version
+      - run: sudo apt-get install -y g++-13 && clang++ --version
       - run: tools/fetch_cuda.sh
       - run: make ptx
       - name: no stack frames or spills
