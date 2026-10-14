@@ -32,7 +32,7 @@ Projects still being built (in build order):
 | LLM inference engine | [`llm-inference-engine/`](llm-inference-engine/) | Rust (CPU, AVX2), JAX training | Done: paged KV, continuous batching (3.1×), prefix cache, int8, speculative decoding; model trained here |
 | InferX | [`inferx/`](inferx/) | | Not started |
 | MCP Fabric | [`mcp-fabric/`](mcp-fabric/) | Java 21, Spring Boot 3 | Done: MCP gateway federating stdio/HTTP servers; authz, schema validation, rate limits, circuit breakers, hash-chained audit |
-| EvalOps | [`evalops/`](evalops/) | Java / Spring | Not started (Maven is reachable now) |
+| EvalOps | [`evalops/`](evalops/) | Java 21, Spring Boot 3, H2 | Done: versioned datasets, eval runs, paired bootstrap comparisons, CI gates; evaluates llm-inference-engine |
 | UVM SoC verification | [`uvm-soc-verification/`](uvm-soc-verification/) | SystemVerilog RTL, pyuvm, cocotb, Verilator | Done: 100 % functional coverage, 12/12 injected bugs caught |
 
 See [HANDOFF.md](HANDOFF.md) for the plan and what blocks each project.

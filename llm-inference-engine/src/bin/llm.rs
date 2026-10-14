@@ -106,12 +106,15 @@ fn main() {
             rt.block_on(async {
                 let l = tokio::net::TcpListener::bind(a.get("listen", "127.0.0.1:8080")).await.unwrap();
                 tracing::info!("listening on {}", l.local_addr().unwrap());
-                axum::serve(l, app)
-                    .with_graceful_shutdown(async {
-                        tokio::signal::ctrl_c().await.ok();
-                    })
-                    .await
-                    .unwrap();
+                // stop on SIGINT or SIGTERM (process managers and containers send SIGTERM)
+                let shutdown = async {
+                    let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).unwrap();
+                    tokio::select! {
+                        _ = tokio::signal::ctrl_c() => {}
+                        _ = term.recv() => {}
+                    }
+                };
+                axum::serve(l, app).with_graceful_shutdown(shutdown).await.unwrap();
             });
         }
         "ppl" => {

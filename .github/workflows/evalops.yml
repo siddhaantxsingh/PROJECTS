@@ -1,0 +1,16 @@
+name: evalops
+on:
+  push:
+    paths: ["evalops/**", ".github/workflows/evalops.yml"]
+  pull_request:
+    paths: ["evalops/**", ".github/workflows/evalops.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: evalops }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - run: mvn -B verify
