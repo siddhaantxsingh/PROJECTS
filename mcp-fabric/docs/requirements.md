@@ -16,4 +16,4 @@
 | OAuth 2.1 authorization (MCP auth spec), TLS | NOT IMPLEMENTED | static bearer tokens; see limitations |
 | Sampling, elicitation, roots, subscriptions, progress forwarding | NOT IMPLEMENTED | — |
 | Multi-instance / HA | NOT IMPLEMENTED | — |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/mcp-fabric.yml` |
+| CI | VERIFIED | `.github/workflows/mcp-fabric.yml` (run 38560670251 green) |

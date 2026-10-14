@@ -1,27 +1,12 @@
 # Projects
 
-A portfolio of production-oriented engineering projects. Each project lives in its own top-level directory, with its own README, documentation, tests and CI workflow (`.github/workflows/<project>.yml`, triggered by changes under that directory).
+A portfolio of 15 production-oriented engineering projects. Each project lives in its own top-level directory, with its own README, documentation (`docs/`: design, testing, benchmarks, limitations, requirements matrix), tests and CI workflow (`.github/workflows/<project>.yml`, triggered by changes under that directory). **The latest CI run of every workflow is green.**
 
 | Project | Directory | Stack | Status |
 |---|---|---|---|
 | **Groundwork**: RAG + evaluation engine | [`groundwork/`](groundwork/) | Python, FastAPI, PostgreSQL + pgvector, Redis | Done. 72 tests pass; benchmarks and audit done. |
 | **Campus AI OS**: course knowledge platform | [`campus-ai-os/`](campus-ai-os/) | FastAPI backend (uses Groundwork), React + Vite | Done as a vertical slice. 39 API tests and 1 browser E2E test pass; audit done. |
 | **vectordb**: ANN search engine | [`vectordb/`](vectordb/) | Rust: HNSW, PQ, SIMD, WAL + snapshots, REST + gRPC | Done. 36 tests pass; benchmarked against FAISS; audit done. |
-
-The project statuses use these terms:
-
-- **VERIFIED:** tested, with evidence in the repository.
-- **IMPLEMENTED BUT UNVERIFIED**
-- **PARTIALLY IMPLEMENTED**
-- **BLOCKED**
-- **NOT IMPLEMENTED**
-
-Each project's `docs/requirements.md` gives the status per requirement, and its `docs/limitations.md` lists what is known not to work. None of the projects is deployed. The Docker images have not been built.
-
-Projects still being built (in build order):
-
-| Project | Directory | Stack | Status |
-|---|---|---|---|
 | RISC-V CPU | [`riscv-cpu/`](riscv-cpu/) | SystemVerilog, Verilator, C++ | Done: riscv-tests 64/64, random tests match Spike, CoreMark 2.87/MHz |
 | Distributed training | [`distributed-training/`](distributed-training/) | Python/NumPy, TCP | Done (CPU): DDP + ZeRO-1 + elastic restart, 36 tests |
 | Industrial Edge | [`industrial-edge/`](industrial-edge/) | Go (stdlib), Modbus TCP, MQTT | Done: no loss across broker outage + kill -9; 10k records/s |
@@ -35,18 +20,39 @@ Projects still being built (in build order):
 | EvalOps | [`evalops/`](evalops/) | Java 21, Spring Boot 3, H2 | Done: versioned datasets, eval runs, paired bootstrap comparisons, CI gates; evaluates llm-inference-engine |
 | UVM SoC verification | [`uvm-soc-verification/`](uvm-soc-verification/) | SystemVerilog RTL, pyuvm, cocotb, Verilator | Done: 100 % functional coverage, 12/12 injected bugs caught |
 
-See [HANDOFF.md](HANDOFF.md) for the plan and what blocks each project.
+The project statuses use these terms:
+
+- **VERIFIED:** tested, with evidence in the repository.
+- **IMPLEMENTED BUT UNVERIFIED**
+- **PARTIALLY IMPLEMENTED**
+- **BLOCKED:** cannot be done in this environment (e.g. no GPU).
+- **NOT IMPLEMENTED**
+
+Each project's `docs/requirements.md` gives the status per requirement, and its `docs/limitations.md` lists what is known not to work. None of the projects is deployed. The Docker images have not been built. No GPU was available, so GPU execution is BLOCKED everywhere it appears (`cuda-kernels`, `llm-inference-engine`, `inferx`, `nebula-gpu-cloud`); each says what was done instead.
+
+See [HANDOFF.md](HANDOFF.md) for the state of the work and how each project was verified.
 
 ## Running the tests
 
-```bash
-# services for groundwork / campus-ai-os
-#   PostgreSQL 16 with pgvector at postgresql://postgres@127.0.0.1:5432/postgres, and Redis at localhost:6379
+Each project's README has details. In short:
 
+```bash
+# groundwork / campus-ai-os need PostgreSQL 16 + pgvector at postgresql://postgres@127.0.0.1:5432/postgres and Redis at localhost:6379
 cd groundwork && pip install -e '.[dev]' && pytest
 cd campus-ai-os && pip install -e ../groundwork -e 'backend[dev]' && (cd backend && pytest)
-cd campus-ai-os/frontend && npm ci && npm run build && npx playwright test
 cd vectordb && cargo test
+cd riscv-cpu && make fetch && make test            # Verilator + RISC-V GCC; make test-spike compares with Spike
+cd distributed-training && pip install -e '.[dev]' && pytest
+cd industrial-edge && go test ./...               # mosquitto for the MQTT end-to-end test
+cd edgefleet && go test ./...
+cd int8-fp8-accelerator && make test              # Verilator + cocotb 1.9
+cd nebula-gpu-cloud && cargo test --release
+cd cuda-kernels && make test                      # CPU SIMT emulator; tools/fetch_cuda.sh && make ptx for device code
+cd llm-inference-engine && cargo test --release
+cd inferx && go test -race ./...
+cd mcp-fabric && mvn -B verify
+cd evalops && mvn -B verify
+cd uvm-soc-verification && python3 tools/regress.py --seeds 3 --bugs   # Verilator + cocotb 1.9 + pyuvm
 ```
 
 Author: Siddhant Singh (siddhaantxsingh@gmail.com). No license has been chosen yet; all rights are reserved until one is added.

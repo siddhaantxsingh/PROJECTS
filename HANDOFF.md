@@ -1,8 +1,12 @@
 # HANDOFF — 15-project engineering portfolio
 
-> **Update, 2026-10-13 (Claude Code session):** this session finished the vector DB (project 6) and published the three finished projects to GitHub, in `siddhaantxsingh/PROJECTS` on branch `ccr-a6e6c567-y4w7k8`, as one monorepo with one top-level directory per project. Sections marked *(updated)* below reflect this session. Two things were not available to this session: the per-repo git bundles, so the earlier commit history was **not** carried over (the first commit imports the packaged working trees), and the `master/` tracking files, so the status table below serves as the tracker.
+> **Update, 2026-10-14 (Claude Code session): all 15 projects are done** in this monorepo (`siddhaantxsingh/PROJECTS`, branch `ccr-a6e6c567-y4w7k8`), one top-level directory each. The latest GitHub Actions run of every project workflow is green. The three earlier blockers were all resolved:
+>
+> * **Maven.** Maven Central became reachable, so MCP Fabric and EvalOps were built in Java.
+> * **UVM.** UVM runs through pyuvm on cocotb + Verilator.
+> * **GPU.** There is still no GPU. The CUDA kernels were verified on a CPU SIMT emulator and compiled to SASS with NVIDIA's ptxas from PyPI. The LLM engine and InferX run on CPU.
 
-Workspace: `/home/claude/projects/p15/` (cloud sandbox). Packaged copies live in `/mnt/user-data/outputs/p15/`: zip and git bundle per repository, plus `master/`.
+Workspace: `/home/user/PROJECTS` (Claude Code cloud container, 4 vCPU, 15 GiB). Each project has `README.md` and `docs/` (design, testing, benchmarks, limitations, `requirements.md` with a VERIFIED / BLOCKED / … status per requirement).
 
 ## Original goal
 
@@ -32,19 +36,28 @@ Each one must pass the quality gates for correctness, reliability, security, per
 - Commits are authored by "Siddhant Singh" <siddhaantxsingh@gmail.com>.
 - Master tracking files are kept up to date in `master/`.
 
+
 ## Status at a glance
 
-| # | Project | Repo | Status |
-|---|---|---|---|
-| 10 | RAG + Evaluation Engine ("Groundwork") | `groundwork/` HEAD `4878898` | **Done**: 72 tests pass; benchmarks, audit, docs done. Packaged. |
-| 14 | Campus AI OS | `campus-ai-os/` HEAD `48261a4` | **Done** as a vertical slice: 39 API tests and 1 browser E2E pass; audit done. Packaged. No real users. |
-| 6 | Vector DB (Rust) | `vectordb/` | **Done** *(updated)*: 36 tests pass, including the server end-to-end tests; benchmarked at 100k × 128 against FAISS; audit found 6 defects, all fixed with regression tests; docs, ADRs, CI and Dockerfile written. |
-| 11, 9, 16, 20, 13, 18 | RISC-V, distributed training (CPU), Industrial Edge, EdgeFleet, accelerator RTL, Nebula | — | Not started (feasible here, with the limits listed in `master/MASTER_RESOURCE_BUDGET.md`). |
-| 8, 7, 17 | CUDA kernels, LLM inference engine, InferX | — | Not started; their GPU parts are BLOCKED (no GPU or nvcc here). |
-| 15, 19 | MCP Fabric, EvalOps (Java/Spring) | — | BLOCKED: Maven Central returns 403 through the sandbox proxy. |
-| 12 | UVM SoC verification | — | BLOCKED: no UVM-capable simulator (only Verilator 5.020). |
+Numbers are from each project's `docs/` and were measured in this container. CI is the run that verified each workflow.
 
-Revised order (recorded in `master/MASTER_DECISIONS.md`): 10 ✓ → 14 ✓ → 6 ✓ → **11 (next)** → 9 → 16 → 20 → 13 → 18 → 8 → 7 → 17. The blocked projects (15, 19, 12) come last.
+| # | Project | Directory | Key evidence | Main BLOCKED / not implemented |
+|---|---|---|---|---|
+| 10 | RAG + evaluation (Groundwork) | `groundwork/` | 72 tests; retrieval and injection benchmarks; audit | paraphrased injections undetected; lexical groundedness |
+| 14 | Campus AI OS | `campus-ai-os/` | 39 API tests + browser E2E; audit | no SSO/MFA; single process |
+| 6 | Vector DB | `vectordb/` | 36 tests; benchmarked against FAISS; audit (6 defects fixed) | no auth; slow mid-selectivity filters |
+| 11 | RISC-V CPU | `riscv-cpu/` | riscv-tests 64/64; 250/250 random programs match Spike; CoreMark 2.87/MHz | no FPGA run |
+| 9 | Distributed training | `distributed-training/` | DDP + ZeRO-1 + elastic restart; 36 tests | GPU / NCCL BLOCKED (CPU + TCP only) |
+| 16 | Industrial Edge | `industrial-edge/` | Modbus + MQTT; no loss across broker outage and kill -9; 10k records/s | no real PLC hardware |
+| 20 | EdgeFleet | `edgefleet/` | signed A/B OTA; staged rollouts; a bad release halted after 15/2,000 devices | no HA control plane; no TUF |
+| 13 | INT8/FP8 accelerator | `int8-fp8-accelerator/` | bit-exact INT8/FP8 GEMM vs model; exact FP8 accumulation; 90.5 % utilisation | no FPGA/ASIC run |
+| 18 | Nebula GPU cloud | `nebula-gpu-cloud/` | topology-aware gang scheduler (property tests); crash-safe journal; e2e with real agents; simulator | real GPUs BLOCKED (simulated); no HA |
+| 8 | CUDA kernels | `cuda-kernels/` | 100 checks on CPU SIMT emulator; sm_80/sm_90 SASS via ptxas, 0 spills; modelled coalescing/bank conflicts | **GPU timing BLOCKED** (no GPU) |
+| 7 | LLM inference engine | `llm-inference-engine/` | paged KV, continuous batching (3.1×), prefix cache, int8, speculative decoding; matches JAX to 1.8e-8; bit-exact across strategies | pretrained weights BLOCKED (HF unreachable; model trained here); GPU BLOCKED |
+| 17 | InferX | `inferx/` | prefix-affinity routing 1.68× vs round robin on real engines; autoscaling 1→4→1, 0 failed | GPU replicas BLOCKED; single gateway |
+| 15 | MCP Fabric | `mcp-fabric/` | 14 tests incl. real stdio + HTTP upstream processes; hash-chained audit; ~2.3 ms overhead | no OAuth/TLS; no sampling/elicitation forwarding |
+| 19 | EvalOps | `evalops/` | 8 tests incl. bootstrap calibration; evaluates llm-inference-engine (int8 passes gate, draft fails) | no chat format / LLM judge / sandboxed code exec |
+| 12 | UVM SoC verification | `uvm-soc-verification/` | pyuvm; 70/70 seeded runs; 100 % functional coverage; 12/12 injected bugs caught | SystemVerilog UVM on a commercial simulator BLOCKED |
 
 ## Completed changes
 
@@ -100,39 +113,49 @@ Rust 1.97. Commits `234006c` (core) and `95115a6` (WIP server).
   - `server.rs`: axum REST and tonic gRPC; the proto is compiled with protox in `build.rs`, so no protoc is needed. Also a Prometheus `/metrics` endpoint and collection-name validation.
   - `main.rs`: `serve` and `check` subcommands, graceful shutdown on SIGINT/SIGTERM.
 
-## Unfinished work: exact next steps *(updated)*
 
-### Vector DB (project 6): done
+### Projects completed on 2026-10-14
 
-What this session did:
+Each project's README and `docs/testing.md` give the full evidence. What follows notes how each was verified and what testing found.
 
-- Made the server tests pass. The only compile error was a missing `IntoFuture` import. The servers now also shut down gracefully, so the restart test restarts for real.
-- Added an exclusive `LOCK` file per collection. Before this, two handles could append to the same WAL.
-- Wrote the real `vdb-bench` harness and `benchmarks/faiss_baseline.py`. Results are in `vectordb/benchmarks/results/2026-10-13/` and are rendered to `vectordb/docs/benchmarks.md`. The first version of the harness drew its queries from different cluster centres than the base set; this was found and fixed before publishing.
-- Ran the adversarial audit with a subagent:
-  - the reproductions were committed while still failing, with the log in `test-logs/audit-fail-before.txt`;
-  - the defects were then fixed;
-  - details are in `vectordb/docs/audit.md`.
+- **RISC-V CPU:**
+  - Problems Spike comparison exposed, and their fixes: counters zeroed in generated programs, and `_zicntr` added to the ISA string.
+  - The interrupt test enabled interrupts too early (fixed).
+- **Distributed training:** the cosine LR schedule depended on `--steps`, so `--stop-after` was added for resume tests.
+- **Industrial Edge:** testing exposed and fixed these bugs (most have fail-before regression tests):
+  - the swinging-door compression variant violated its error bound;
+  - the health check set lastOK even on errors;
+  - the uplink did not drain while disconnected.
+- **EdgeFleet:** the rollback target could be missing for devices that had not yet heartbeated; enrollment now records the version.
+- **INT8/FP8 accelerator:** the cycle formula is K + 3N + 3 and is checked cycle-exactly.
+- **Nebula:**
+  - Mutation checks run against the scheduler tests.
+  - The simulator's slow-down factors are labelled as assumptions; a run without them is included.
+- **CUDA kernels:**
+  - ptxas showed register arrays spilling to local memory, fixed with unroll pragmas.
+  - The tracer found an 8-way bank conflict and uncoalesced stores, both fixed.
+  - CI needed GCC 13 headers for clang 18 CUDA mode.
+- **LLM inference engine:**
+  - The model was trained here (JAX, 3.0 M parameters, Python stdlib corpus). Training ran detached with checkpoint/resume, because worker restarts killed it once.
+  - One mutant remains unkilled (documented).
+  - The EvalOps demo found a missing SIGTERM handler, now fixed.
+- **InferX:** `go test -race` found a double `exec.Cmd.Wait` (fixed). An invalid cache-benefit experiment, which used a fixed stride, was corrected.
+- **MCP Fabric:** metrics export is disabled in `@SpringBootTest` by default, so the test needs `@AutoConfigureObservability`. The benchmark shows the audit fsync caps throughput: 2,255 calls/s, against 5,815 on tmpfs.
+- **EvalOps:**
+  - The gate rule design was fixed: a `minValue`-only rule no longer implies `maxDrop = 0`.
+  - `gate.sh` exited 1 on a parse error, which a CI job would read as a failed gate. It now exits 2.
+- **UVM:** the first bug-injection run caught 11 of 12 bugs. The escape (W1C on the wrong bit) revealed a stimulus hole, which was closed.
 
-Optional follow-ups, all documented as limitations:
+## Next steps (none required; options)
 
-- a cost-based filter planner and a columnar metadata index (filtered search at 1–10 % selectivity takes about 13–18 ms);
-- an IVF coarse quantizer for PQ;
-- fault-injection tests for the WAL rollback path;
-- real datasets such as SIFT1M.
-
-### Next: projects 11 → 9 → 16 → 20 → 13 → 18
-
-After those come the CPU-only parts of 8, 7 and 17, and then the consolidated 15-project report. Add each project as a new top-level directory in this monorepo, with its own `.github/workflows/<name>.yml` that uses `paths:` filters, as in the existing workflows.
-
-### GitHub / CI *(updated)*
-
-- CI now runs on GitHub Actions for all three projects.
-- The first runs exposed two problems, both fixed:
-  - the Python suites imported `tests.*`, which only resolved under `python -m pytest` (fixed by setting `pythonpath = ["."]`);
-  - GitHub's newer stable clippy (1.99) added a lint that the local 1.97 toolchain lacked.
+- Choose a LICENSE (owner decision pending).
+- Build and publish the Docker images. This was not done: Docker Hub was blocked in the first sandbox, and nothing was deployed.
+- Run on real hardware where it is BLOCKED here: GPU timings for `cuda-kernels` (`make gpu-bench`), GPU replicas for InferX and Nebula, and FPGA runs for the RTL projects.
+- Items listed in each project's `docs/limitations.md`. Examples: group commit for the MCP Fabric audit log, OAuth for MCP Fabric, a cache-aware InferX autoscaler.
 
 ## Known bugs and open issues
+
+See each project's `docs/limitations.md`. Notes for the earlier projects:
 
 - **vectordb** *(updated)*: see `vectordb/docs/limitations.md`. The main items:
   - no authentication;
@@ -154,7 +177,10 @@ After those come the CPU-only parts of 8, 7 and 17, and then the consolidated 15
   - CI runs on GitHub and is green for all three projects *(updated)*;
   - no LICENSE file (owner decision pending).
 
-## Tests actually run (all in this sandbox) and results
+
+## Tests actually run
+
+Every project's tests ran in this container before each commit, and again in CI (all green). Earlier records for the first three projects:
 
 | Repo | Command | Result |
 |---|---|---|
@@ -177,44 +203,17 @@ After those come the CPU-only parts of 8, 7 and 17, and then the consolidated 15
 | groundwork | `pytest` re-run in the Claude Code container (PG 16.15 + pgvector 0.6.0 + Redis 7.0) *(2026-10-13)* | 72 passed |
 | campus-ai-os | backend `pytest`, `npm run build`, `npx playwright test` re-run *(2026-10-13)* | 39 passed; build OK; 1 passed |
 
-## Setup commands
 
-```bash
-# services (the sandbox needed these restarted after the container restarted)
-pg_ctlcluster 16 main start                 # PostgreSQL 16; apt-get install postgresql-16-pgvector if missing
-redis-server --daemonize yes
-export PATH=$PATH:/usr/local/go/bin
+## Setup notes for this container
 
-# groundwork
-cd groundwork && pip install --break-system-packages -e '.[dev]' && pytest
-python3 benchmarks/retrieval_bench.py benchmarks/results/<date> --pg postgresql://postgres@127.0.0.1:5432/postgres
-python3 benchmarks/render_md.py <date>
-
-# campus-ai-os (needs groundwork installed editable)
-cd campus-ai-os && pip install --break-system-packages -e ../groundwork -e 'backend[dev]'
-cd backend && pytest
-cd ../frontend && npm ci && npm run build && npx playwright test   # Chromium at /opt/pw-browsers/chromium-1194 (override with CHROMIUM_PATH)
-
-# vectordb
-cd vectordb && cargo test --lib && cargo test --test collection && cargo test --test api
-cargo run --release -- serve --data ./data --http 127.0.0.1:6333 --grpc 127.0.0.1:6334
-```
-
-On your own machine, restore a repository from its bundle:
-
-```bash
-git clone <name>.bundle <name>
-```
-
-The bundles are in the outputs folder `p15/`.
-
-## Environment constraints
-
-- 2 vCPU, 7.8 GiB RAM, about 7 GB free disk; no GPU.
-- **Reachable:** PyPI, npm, crates.io, proxy.golang.org.
-- **Blocked (HTTP 403):** Maven Central, Hugging Face, Docker Hub, GitHub. This applied to the earlier sandbox. The Claude Code container used on 2026-10-13 can push to GitHub and has 4 vCPUs and 15 GiB RAM.
-- The weekly usage allowance is not visible to the agent, so no figures are recorded.
+- **Go** is at `/usr/local/go/bin`.
+- **cocotb 1.9.2 + pyuvm 5.0** are in a scratch venv. cocotb 2.x needs Verilator ≥ 5.036; this container has 5.020.
+- **Java 21 + Maven 3.9** resolve through Maven's own proxy settings. A plain `curl` to Maven Central returned 429.
+- **JAX (CPU)** was installed from PyPI to train the LLM model.
+- **The CUDA toolkit pieces** (headers, ptxas, libdevice, cudart, libnvfatbin) come from NVIDIA's PyPI wheels via `cuda-kernels/tools/fetch_cuda.sh`.
+- **huggingface.co and download.pytorch.org are unreachable.**
+- **Never `pkill -f` with a pattern that also appears in the running command.** It kills the shell; use `pkill -x` or PIDs.
 
 ## Tracking files
 
-`master/MASTER_PROGRESS.md`, `MASTER_TASKS.md`, `MASTER_DECISIONS.md`, `MASTER_BLOCKERS.md`, `MASTER_VERIFICATION.md`, `MASTER_RESOURCE_BUDGET.md`. They are current through project 14. Add a project 6 entry once the server tests pass.
+The `master/` tracking files from the first sandbox are not in this repository. The per-project `docs/requirements.md` files replace them as the status record.

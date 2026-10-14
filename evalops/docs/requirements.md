@@ -12,4 +12,4 @@
 | Evaluation of a real model | VERIFIED | `docs/demo.md` (llm-inference-engine f32 vs int8) |
 | Chat / multi-turn, LLM-as-judge, sandboxed code execution | NOT IMPLEMENTED | limitations |
 | Auth, multi-tenancy | NOT IMPLEMENTED | limitations |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/evalops.yml` |
+| CI | VERIFIED | `.github/workflows/evalops.yml` (run 38562292362 green) |

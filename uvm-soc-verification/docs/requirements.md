@@ -11,4 +11,4 @@
 | SystemVerilog UVM on a commercial simulator | BLOCKED | no such simulator; Verilator 5.020 cannot run the UVM class library |
 | SVA / formal properties | NOT IMPLEMENTED | — |
 | CPU-level SoC (core + peripherals) verification | NOT IMPLEMENTED | — |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/uvm-soc-verification.yml` |
+| CI | VERIFIED | `.github/workflows/uvm-soc-verification.yml` (run 38555176169 green) |

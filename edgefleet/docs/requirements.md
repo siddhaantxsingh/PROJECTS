@@ -16,4 +16,4 @@
 | Admin CLI | VERIFIED | `fleetctl` used by e2e |
 | HA / multi-instance control plane | NOT IMPLEMENTED | — |
 | Delta updates, key rotation, TUF | NOT IMPLEMENTED | — |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/edgefleet.yml` |
+| CI | VERIFIED | `.github/workflows/edgefleet.yml` (run 38517425606 green) |

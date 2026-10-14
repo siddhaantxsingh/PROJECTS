@@ -10,4 +10,4 @@
 | Metrics | VERIFIED (basic) | `/metrics`, `/v1/replicas` |
 | GPU replicas, GPU-aware placement | BLOCKED | no GPU |
 | Multi-instance gateway, cloud autoscaling | NOT IMPLEMENTED | limitations |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/inferx.yml` |
+| CI | VERIFIED | `.github/workflows/inferx.yml` (run 38587619872 green) |
