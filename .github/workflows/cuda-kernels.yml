@@ -1,0 +1,28 @@
+name: cuda-kernels
+on:
+  push:
+    paths: ["cuda-kernels/**", ".github/workflows/cuda-kernels.yml"]
+  pull_request:
+    paths: ["cuda-kernels/**", ".github/workflows/cuda-kernels.yml"]
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: cuda-kernels }
+    steps:
+      - uses: actions/checkout@v4
+      - run: make test
+      - run: make analyze > /dev/null
+  device:
+    # compiles the kernels as real CUDA (no GPU on the runner: nothing is executed)
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: cuda-kernels }
+    steps:
+      - uses: actions/checkout@v4
+      - run: clang++ --version
+      - run: tools/fetch_cuda.sh
+      - run: make ptx
+      - name: no stack frames or spills
+        run: "! grep -E ' [1-9][0-9]* bytes (stack frame|spill)' build/device/ptxas_*.txt"
+      - run: make gpu-bench

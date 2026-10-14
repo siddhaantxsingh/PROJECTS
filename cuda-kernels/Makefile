@@ -1,0 +1,32 @@
+CXX ?= g++
+CXXFLAGS ?= -O2 -std=c++20 -pthread -Wall -Wextra -Iinclude
+BUILD := build
+
+.PHONY: test analyze ptx clean
+$(BUILD)/test_kernels: tests/test_kernels.cpp include/kc/*.h include/kc/*.cuh
+	@mkdir -p $(BUILD)
+	$(CXX) $(CXXFLAGS) $< -o $@
+$(BUILD)/test_tracer: tests/test_tracer.cpp include/kc/*.h
+	@mkdir -p $(BUILD)
+	$(CXX) $(CXXFLAGS) $< -o $@
+test: $(BUILD)/test_kernels $(BUILD)/test_tracer
+	./$(BUILD)/test_tracer
+	./$(BUILD)/test_kernels
+clean:
+	rm -rf $(BUILD)
+$(BUILD)/analyze: tools/analyze.cpp include/kc/*.h include/kc/*.cuh
+	@mkdir -p $(BUILD)
+	$(CXX) $(CXXFLAGS) $< -o $@
+analyze: $(BUILD)/analyze
+	./$(BUILD)/analyze
+
+# ---- device builds (clang + a CUDA toolkit root; tools/fetch_cuda.sh makes one from PyPI wheels)
+CUDA_ROOT ?= build/cuda-root
+CUDA_ARCH ?= sm_80
+ptx:
+	CUDA_ROOT=$(CUDA_ROOT) tools/device_build.sh build/device sm_80 sm_90
+	python3 tools/resources.py build/device > build/resources.json
+gpu-bench: bench/gpu_bench.cu include/kc/*.h include/kc/*.cuh
+	@mkdir -p $(BUILD)
+	clang++ -x cuda --cuda-path=$(CUDA_ROOT) --cuda-gpu-arch=$(CUDA_ARCH) -O3 -std=c++17 -Wno-unknown-cuda-version -Iinclude \
+	  $< -o $(BUILD)/gpu_bench -L$(CUDA_ROOT)/lib64 -l:libcudart.so.12 -Wl,-rpath,$(abspath $(CUDA_ROOT))/lib64

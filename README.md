@@ -28,7 +28,7 @@ Projects still being built (in build order):
 | EdgeFleet | [`edgefleet/`](edgefleet/) | Go (stdlib), Ed25519 | Done: signed A/B OTA, staged rollouts; bad release halted after 15/2,000 devices |
 | INT8/FP8 accelerator | [`int8-fp8-accelerator/`](int8-fp8-accelerator/) | SystemVerilog, cocotb | Done (simulation): bit-exact INT8/FP8 GEMM, exact FP8 accumulation |
 | Nebula GPU cloud | [`nebula-gpu-cloud/`](nebula-gpu-cloud/) | Rust (axum, tokio) | Done (simulated GPUs): topology-aware gang scheduling, fair share, backfill, preemption; crash-safe state |
-| CUDA kernels | [`cuda-kernels/`](cuda-kernels/) | | Not started (no GPU here) |
+| CUDA kernels | [`cuda-kernels/`](cuda-kernels/) | CUDA C++, clang + ptxas, CPU SIMT emulator | Done (no GPU: functional on emulator, compiled for sm_80/sm_90; GPU timing BLOCKED) |
 | LLM inference engine | [`llm-inference-engine/`](llm-inference-engine/) | | Not started |
 | InferX | [`inferx/`](inferx/) | | Not started |
 | MCP Fabric | [`mcp-fabric/`](mcp-fabric/) | Java / Spring | Not started (Maven is reachable now) |

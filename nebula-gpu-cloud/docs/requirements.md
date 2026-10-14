@@ -21,4 +21,4 @@
 | Real GPUs, NVML/DCGM health, containers / cgroups | BLOCKED | no GPU on the build machine; not implemented |
 | HA control plane, fencing of partitioned nodes | NOT IMPLEMENTED | docs/limitations.md |
 | TLS / mTLS, per-node identity | NOT IMPLEMENTED | static bearer tokens; docs/limitations.md |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/nebula-gpu-cloud.yml` |
+| CI | VERIFIED | `.github/workflows/nebula-gpu-cloud.yml` (run 38522697861 green) |
