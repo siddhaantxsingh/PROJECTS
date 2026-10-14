@@ -137,6 +137,7 @@ fn mixed_params() -> Vec<SamplingParams> {
                     seed: i as u64,
                     max_tokens: 30,
                     stop: vec![],
+                    ignore_eos: false,
                 }
             }
         })

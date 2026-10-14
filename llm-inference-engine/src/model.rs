@@ -1,5 +1,9 @@
 //! Weights and the batched forward pass (Llama architecture: RMSNorm, RoPE,
-//! grouped-query attention, SwiGLU, tied embeddings).
+//! grouped-query attention, SwiGLU, tied or separate output embeddings,
+//! optional Q/K/V biases as in Qwen2).
+//!
+//! Weights load from this project's `LLMW` files or from GGUF files
+//! (`general.architecture` = `llama` or `qwen2`).
 //!
 //! The forward pass takes a flat list of tokens from any number of
 //! sequences, each with its position and its sequence's KV block table. All
@@ -23,6 +27,11 @@ pub struct Config {
     pub max_seq: usize,
     pub rope_theta: f32,
     pub eps: f32,
+    /// RoPE rotates (x[i], x[i + head_dim/2]) pairs ("NeoX" style, Qwen2)
+    /// instead of adjacent (x[2i], x[2i+1]) pairs (Llama in GGUF, whose Q/K
+    /// weights the converter has permuted for adjacent pairs)
+    #[serde(default)]
+    pub rope_neox: bool,
 }
 
 impl Config {
@@ -44,12 +53,16 @@ pub struct Layer {
     pub w1: Mat,
     pub w3: Mat,
     pub w2: Mat,
+    /// Q/K/V biases (Qwen2); None for Llama
+    pub bq: Option<Vec<f32>>,
+    pub bk: Option<Vec<f32>>,
+    pub bv: Option<Vec<f32>>,
 }
 
 pub struct Model {
     pub cfg: Config,
     pub embed: Vec<f32>,
-    /// the embedding matrix used as the output projection (may be int8)
+    /// the output projection: the embedding matrix if tied (may be int8)
     pub lm_head: Mat,
     pub norm: Vec<f32>,
     pub layers: Vec<Layer>,
@@ -81,7 +94,166 @@ struct Header {
     tensors: Vec<TensorInfo>,
 }
 
+fn rope_tables(c: &Config) -> (Vec<f32>, Vec<f32>) {
+    let hd = c.head_dim();
+    let half = hd / 2;
+    let mut rope_cos = vec![0f32; c.max_seq * half];
+    let mut rope_sin = vec![0f32; c.max_seq * half];
+    for pos in 0..c.max_seq {
+        for i in 0..half {
+            // same formula as the trainer: theta^(-2i/hd), computed in f64
+            let inv = 1.0 / (c.rope_theta as f64).powf((2 * i) as f64 / hd as f64);
+            let a = pos as f64 * inv;
+            rope_cos[pos * half + i] = a.cos() as f32;
+            rope_sin[pos * half + i] = a.sin() as f32;
+        }
+    }
+    (rope_cos, rope_sin)
+}
+
+/// Facts about a GGUF model, for logs and the API.
+#[derive(Clone, Debug, Serialize)]
+pub struct GgufInfo {
+    pub name: String,
+    pub architecture: String,
+    /// tensor types in the file, e.g. {"F16": 211, "F32": 61}
+    pub tensor_types: std::collections::BTreeMap<String, usize>,
+    pub file_bytes: u64,
+    /// the model's own context length (the engine may use less)
+    pub context_length: usize,
+}
+
 impl Model {
+    /// Load an `LLMW` or GGUF file (detected by its magic bytes). A GGUF
+    /// file also yields its tokenizer.
+    pub fn load_any(path: &std::path::Path, max_seq: Option<usize>) -> Result<(Model, Option<crate::tokenizer::Tokenizer>), String> {
+        let mut magic = [0u8; 4];
+        use std::io::Read;
+        std::fs::File::open(path)
+            .and_then(|mut f| f.read_exact(&mut magic))
+            .map_err(|e| format!("{}: {e}", path.display()))?;
+        if &magic == b"GGUF" {
+            let g = crate::gguf::Gguf::open(path)?;
+            let (m, _) = Model::from_gguf(&g, max_seq)?;
+            let t = crate::tokenizer::Tokenizer::from_gguf(&g)?;
+            Ok((m, Some(t)))
+        } else {
+            Ok((Model::load(path)?, None))
+        }
+    }
+
+    /// Build the model from a parsed GGUF file. `max_seq` caps the context
+    /// (and the RoPE tables) below the model's own `context_length`.
+    pub fn from_gguf(g: &crate::gguf::Gguf, max_seq: Option<usize>) -> Result<(Model, GgufInfo), String> {
+        let arch = g.get_str("general.architecture")?.to_string();
+        let neox = match arch.as_str() {
+            "llama" => false,
+            "qwen2" => true,
+            a => return Err(format!("architecture {a:?} is not supported (llama, qwen2)")),
+        };
+        let k = |s: &str| format!("{arch}.{s}");
+        let u = |s: &str| g.get_u64(&k(s)).map(|v| v as usize);
+        let d = u("embedding_length")?;
+        let heads = u("attention.head_count")?;
+        let kv_heads = u("attention.head_count_kv").unwrap_or(heads);
+        let ctx = u("context_length")?;
+        let emb = g.tensor("token_embd.weight").ok_or("missing token_embd.weight")?;
+        let vocab = emb.dims.get(1).copied().unwrap_or(0) as usize;
+        let cfg = Config {
+            vocab,
+            dim: d,
+            layers: u("block_count")?,
+            heads,
+            kv_heads,
+            hidden: u("feed_forward_length")?,
+            max_seq: max_seq.unwrap_or(ctx).min(ctx),
+            rope_theta: g.get_f64(&k("rope.freq_base")).unwrap_or(10000.0) as f32,
+            eps: g.get_f64(&k("attention.layer_norm_rms_epsilon"))? as f32,
+            rope_neox: neox,
+        };
+        if heads == 0 || kv_heads == 0 || !d.is_multiple_of(heads) || !heads.is_multiple_of(kv_heads) || !cfg.head_dim().is_multiple_of(2) {
+            return Err(format!("inconsistent config {cfg:?}"));
+        }
+        let hd = cfg.head_dim();
+        for key in ["attention.key_length", "attention.value_length", "rope.dimension_count"] {
+            if let Ok(v) = u(key)
+                && v != hd
+            {
+                return Err(format!("{arch}.{key} = {v}, but only head_dim = dim / heads = {hd} is supported"));
+            }
+        }
+        if let Some(t) = g.get(&k("rope.scaling.type")).and_then(|v| v.as_str())
+            && t != "none"
+        {
+            return Err(format!("RoPE scaling {t:?} is not supported"));
+        }
+        // ggml dims are [cols, rows]
+        let mat = |name: &str, rows: usize, cols: usize| -> Result<Mat, String> {
+            Ok(Mat::F32 {
+                rows,
+                cols,
+                w: g.tensor_f32(name, &[cols, rows])?,
+            })
+        };
+        let vecf = |name: &str, n: usize| g.tensor_f32(name, &[n]);
+        let opt_vec = |name: &str, n: usize| -> Result<Option<Vec<f32>>, String> {
+            if g.tensor(name).is_some() { Ok(Some(vecf(name, n)?)) } else { Ok(None) }
+        };
+        let (kvd, c) = (cfg.kv_dim(), &cfg);
+        let mut layers = vec![];
+        for i in 0..c.layers {
+            let p = |s: &str| format!("blk.{i}.{s}");
+            layers.push(Layer {
+                attn_norm: vecf(&p("attn_norm.weight"), d)?,
+                mlp_norm: vecf(&p("ffn_norm.weight"), d)?,
+                wq: mat(&p("attn_q.weight"), d, d)?,
+                wk: mat(&p("attn_k.weight"), kvd, d)?,
+                wv: mat(&p("attn_v.weight"), kvd, d)?,
+                wo: mat(&p("attn_output.weight"), d, d)?,
+                w1: mat(&p("ffn_gate.weight"), c.hidden, d)?,
+                w3: mat(&p("ffn_up.weight"), c.hidden, d)?,
+                w2: mat(&p("ffn_down.weight"), d, c.hidden)?,
+                bq: opt_vec(&p("attn_q.bias"), d)?,
+                bk: opt_vec(&p("attn_k.bias"), kvd)?,
+                bv: opt_vec(&p("attn_v.bias"), kvd)?,
+            });
+        }
+        let embed = g.tensor_f32("token_embd.weight", &[d, vocab])?;
+        let lm_head = if g.tensor("output.weight").is_some() {
+            mat("output.weight", vocab, d)?
+        } else {
+            Mat::F32 {
+                rows: vocab,
+                cols: d,
+                w: embed.clone(),
+            }
+        };
+        let mut tensor_types = std::collections::BTreeMap::new();
+        for t in &g.tensors {
+            *tensor_types.entry(format!("{:?}", t.dtype).to_uppercase()).or_insert(0) += 1;
+        }
+        let info = GgufInfo {
+            name: g.get("general.name").and_then(|v| v.as_str()).unwrap_or("unnamed").to_string(),
+            architecture: arch.clone(),
+            tensor_types,
+            file_bytes: 0,
+            context_length: ctx,
+        };
+        let (rope_cos, rope_sin) = rope_tables(&cfg);
+        Ok((
+            Model {
+                lm_head,
+                embed,
+                norm: vecf("output_norm.weight", d)?,
+                layers,
+                rope_cos,
+                rope_sin,
+                cfg,
+            },
+            info,
+        ))
+    }
+
     pub fn load(path: &std::path::Path) -> Result<Model, String> {
         let raw = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
         if raw.len() < 12 || &raw[..4] != b"LLMW" {
@@ -133,21 +305,13 @@ impl Model {
                 w1: mat(p("w1"), c.hidden, d)?,
                 w3: mat(p("w3"), c.hidden, d)?,
                 w2: mat(p("w2"), d, c.hidden)?,
+                bq: None,
+                bk: None,
+                bv: None,
             });
         }
         let embed = get("embed", &[c.vocab, d])?;
-        let half = hd / 2;
-        let mut rope_cos = vec![0f32; c.max_seq * half];
-        let mut rope_sin = vec![0f32; c.max_seq * half];
-        for pos in 0..c.max_seq {
-            for i in 0..half {
-                // same formula as the trainer: theta^(-2i/hd), computed in f64
-                let inv = 1.0 / (c.rope_theta as f64).powf((2 * i) as f64 / hd as f64);
-                let a = pos as f64 * inv;
-                rope_cos[pos * half + i] = a.cos() as f32;
-                rope_sin[pos * half + i] = a.sin() as f32;
-            }
-        }
+        let (rope_cos, rope_sin) = rope_tables(c);
         Ok(Model {
             lm_head: Mat::F32 {
                 rows: c.vocab,
@@ -193,9 +357,10 @@ impl Model {
         );
         for head in v.chunks_exact_mut(2 * half) {
             for i in 0..half {
-                let (x0, x1) = (head[2 * i], head[2 * i + 1]);
-                head[2 * i] = x0 * c[i] - x1 * s[i];
-                head[2 * i + 1] = x0 * s[i] + x1 * c[i];
+                let (a, b) = if self.cfg.rope_neox { (i, i + half) } else { (2 * i, 2 * i + 1) };
+                let (x0, x1) = (head[a], head[b]);
+                head[a] = x0 * c[i] - x1 * s[i];
+                head[b] = x0 * s[i] + x1 * c[i];
             }
         }
     }
@@ -232,6 +397,15 @@ impl Model {
             l.wq.matmul(&a, n, &mut q);
             l.wk.matmul(&a, n, &mut k);
             l.wv.matmul(&a, n, &mut v);
+            for (bias, out, w) in [(&l.bq, &mut q, d), (&l.bk, &mut k, kvd), (&l.bv, &mut v, kvd)] {
+                if let Some(b) = bias {
+                    for row in out.chunks_exact_mut(w) {
+                        for (o, bb) in row.iter_mut().zip(b) {
+                            *o += bb;
+                        }
+                    }
+                }
+            }
             for (i, t) in toks.iter().enumerate() {
                 self.rope(&mut q[i * d..(i + 1) * d], t.pos);
                 self.rope(&mut k[i * kvd..(i + 1) * kvd], t.pos);

@@ -109,6 +109,7 @@ pub fn start(mut engine: Engine, model_name: String) -> Router {
         .route("/healthz", get(|| async { "ok" }))
         .route("/v1/models", get(models))
         .route("/v1/completions", post(completions))
+        .route("/v1/chat/completions", post(chat_completions))
         .route("/v1/tokenize", post(tokenize))
         .route("/metrics", get(metrics))
         .with_state(state)
@@ -145,11 +146,42 @@ fn finish_str(r: FinishReason) -> &'static str {
     }
 }
 
+#[derive(Deserialize)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Deserialize)]
+pub struct ChatRequest {
+    pub messages: Vec<ChatMessage>,
+    #[serde(default)]
+    pub stream: bool,
+    #[serde(flatten)]
+    pub params: SamplingParams,
+}
+
 async fn completions(State(s): State<AppState>, Json(req): Json<CompletionRequest>) -> Response {
-    if req.params.temperature < 0.0 || !(0.0..=1.0).contains(&req.params.top_p) || req.params.top_p == 0.0 {
+    let prompt = s.tok.encode_prompt(&req.prompt);
+    run(s, prompt, req.params, req.stream, false).await
+}
+
+/// Chat completions: the conversation is rendered with the model's chat
+/// template (ChatML only) and generation stops at the end-of-turn token.
+async fn chat_completions(State(s): State<AppState>, Json(req): Json<ChatRequest>) -> Response {
+    let msgs: Vec<(String, String)> = req.messages.into_iter().map(|m| (m.role, m.content)).collect();
+    let text = match s.tok.apply_chat_template(&msgs) {
+        Ok(t) => t,
+        Err(e) => return err(StatusCode::BAD_REQUEST, e),
+    };
+    let prompt = s.tok.encode_prompt(&text);
+    run(s, prompt, req.params, req.stream, true).await
+}
+
+async fn run(s: AppState, prompt: Vec<u32>, params: SamplingParams, stream: bool, chat: bool) -> Response {
+    if params.temperature < 0.0 || !(0.0..=1.0).contains(&params.top_p) || params.top_p == 0.0 {
         return err(StatusCode::BAD_REQUEST, "temperature must be >= 0 and top_p in (0, 1]");
     }
-    let prompt = s.tok.encode(req.prompt.as_bytes());
     let id = s.next_id.fetch_add(1, Ordering::Relaxed);
     let (tx, mut rx) = tmpsc::unbounded_channel();
     let (rtx, rrx) = std::sync::mpsc::channel();
@@ -157,7 +189,7 @@ async fn completions(State(s): State<AppState>, Json(req): Json<CompletionReques
         .send(Msg::Add {
             id,
             prompt,
-            params: req.params,
+            params,
             tx,
             reply: rtx,
         })
@@ -172,8 +204,8 @@ async fn completions(State(s): State<AppState>, Json(req): Json<CompletionReques
     }
     let name = s.model_name.clone();
     let cid = format!("cmpl-{id}");
-    if req.stream {
-        let stream = async_stream(rx, cid, name);
+    if stream {
+        let stream = async_stream(rx, cid, name, chat);
         return Sse::new(stream)
             .keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
             .into_response();
@@ -197,9 +229,14 @@ async fn completions(State(s): State<AppState>, Json(req): Json<CompletionReques
             }
         }
     }
+    let choice = if chat {
+        json!({"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": reason})
+    } else {
+        json!({"index": 0, "text": text, "finish_reason": reason})
+    };
     Json(json!({
-        "id": cid, "object": "text_completion", "model": *name,
-        "choices": [{"index": 0, "text": text, "finish_reason": reason}],
+        "id": cid, "object": if chat { "chat.completion" } else { "text_completion" }, "model": *name,
+        "choices": [choice],
         "usage": {"prompt_tokens": usage.prompt_tokens, "completion_tokens": usage.completion_tokens,
                   "total_tokens": usage.prompt_tokens + usage.completion_tokens, "cached_tokens": usage.cached_tokens,
                   "ttft_ms": usage.ttft_ms, "total_ms": usage.total_ms, "preemptions": usage.preemptions}
@@ -211,6 +248,7 @@ fn async_stream(
     mut rx: tmpsc::UnboundedReceiver<Event>,
     cid: String,
     name: Arc<String>,
+    chat: bool,
 ) -> impl futures::Stream<Item = Result<SseEvent, std::convert::Infallible>> {
     let (otx, orx) = tmpsc::unbounded_channel::<Result<SseEvent, std::convert::Infallible>>();
     tokio::spawn(async move {
@@ -219,8 +257,13 @@ fn async_stream(
                 Event::Token { text, .. } => (text, None, None),
                 Event::Done { text, reason, usage, .. } => (text, Some(finish_str(reason)), Some(usage)),
             };
-            let mut chunk = json!({"id": cid, "object": "text_completion", "model": *name,
-                                   "choices": [{"index": 0, "text": text, "finish_reason": reason}]});
+            let mut chunk = if chat {
+                json!({"id": cid, "object": "chat.completion.chunk", "model": *name,
+                       "choices": [{"index": 0, "delta": {"content": text}, "finish_reason": reason}]})
+            } else {
+                json!({"id": cid, "object": "text_completion", "model": *name,
+                       "choices": [{"index": 0, "text": text, "finish_reason": reason}]})
+            };
             if let Some(u) = &usage {
                 chunk["usage"] = json!({"prompt_tokens": u.prompt_tokens, "completion_tokens": u.completion_tokens,
                                         "cached_tokens": u.cached_tokens, "ttft_ms": u.ttft_ms, "total_ms": u.total_ms});

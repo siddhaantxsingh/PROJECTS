@@ -21,6 +21,9 @@ pub struct SamplingParams {
     /// generation stops when the text ends with any of these
     #[serde(default)]
     pub stop: Vec<String>,
+    /// keep generating after the model's end-of-sequence token (benchmarks)
+    #[serde(default)]
+    pub ignore_eos: bool,
 }
 
 fn one() -> f32 {
@@ -39,6 +42,7 @@ impl Default for SamplingParams {
             seed: 0,
             max_tokens: 64,
             stop: vec![],
+            ignore_eos: false,
         }
     }
 }

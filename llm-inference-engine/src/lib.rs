@@ -1,4 +1,5 @@
 pub mod engine;
+pub mod gguf;
 pub mod kv;
 pub mod model;
 pub mod ops;

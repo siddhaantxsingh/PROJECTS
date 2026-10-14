@@ -378,8 +378,10 @@ impl Engine {
             s.tokens.push(next);
             s.first_token.get_or_insert_with(Instant::now);
             let generated = s.tokens.len() - s.prompt_len;
-            let text = self.tok.decode(&s.tokens[s.prompt_len..]);
-            let mut reason = None;
+            // the model's end-of-sequence token ends the request; it adds no text
+            let eos = !s.params.ignore_eos && self.tok.stop_ids.contains(&next);
+            let text = self.tok.decode(&s.tokens[s.prompt_len..s.tokens.len() - eos as usize]);
+            let mut reason = eos.then_some(FinishReason::Stop);
             let mut end = text.len();
             for stop in &s.params.stop {
                 if !stop.is_empty()
