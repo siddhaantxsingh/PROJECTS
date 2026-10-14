@@ -1,0 +1,20 @@
+name: industrial-edge
+on:
+  push:
+    paths: ["industrial-edge/**", ".github/workflows/industrial-edge.yml"]
+  pull_request:
+    paths: ["industrial-edge/**", ".github/workflows/industrial-edge.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: industrial-edge }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.24" }
+      - run: sudo apt-get update && sudo apt-get install -y mosquitto && sudo systemctl stop mosquitto || true
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test -race ./internal/...
+      - run: go test -count=2 ./e2e/

@@ -24,7 +24,7 @@ Projects still being built (in build order):
 |---|---|---|---|
 | RISC-V CPU | [`riscv-cpu/`](riscv-cpu/) | SystemVerilog, Verilator, C++ | Done: riscv-tests 64/64, random tests match Spike, CoreMark 2.87/MHz |
 | Distributed training | [`distributed-training/`](distributed-training/) | Python/NumPy, TCP | Done (CPU): DDP + ZeRO-1 + elastic restart, 36 tests |
-| Industrial Edge | [`industrial-edge/`](industrial-edge/) | | Not started |
+| Industrial Edge | [`industrial-edge/`](industrial-edge/) | Go (stdlib), Modbus TCP, MQTT | Done: no loss across broker outage + kill -9; 10k records/s |
 | EdgeFleet | [`edgefleet/`](edgefleet/) | | Not started |
 | INT8/FP8 accelerator | [`int8-fp8-accelerator/`](int8-fp8-accelerator/) | | Not started |
 | Nebula GPU cloud | [`nebula-gpu-cloud/`](nebula-gpu-cloud/) | | Not started |

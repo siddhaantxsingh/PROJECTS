@@ -16,4 +16,4 @@
 | PyTorch integration | BLOCKED | PyTorch CPU wheel index unreachable |
 | Multi-host | IMPLEMENTED BUT UNVERIFIED | plain TCP; only loopback tested |
 | Tensor / pipeline parallelism, ZeRO-2/3, mixed precision | NOT IMPLEMENTED | — |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/distributed-training.yml` |
+| CI | VERIFIED | `.github/workflows/distributed-training.yml` green on GitHub Actions (run 38484856196) |
