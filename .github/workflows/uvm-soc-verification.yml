@@ -1,0 +1,20 @@
+name: uvm-soc-verification
+on:
+  push:
+    paths: ["uvm-soc-verification/**", ".github/workflows/uvm-soc-verification.yml"]
+  pull_request:
+    paths: ["uvm-soc-verification/**", ".github/workflows/uvm-soc-verification.yml"]
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: uvm-soc-verification }
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y verilator
+      - run: verilator --version
+      - run: python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -r tb/requirements.txt
+      - name: lint (verilator -Wall)
+        run: verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL rtl/periph_soc.sv rtl/apb_uart.sv rtl/apb_timer.sv rtl/apb_gpio.sv
+      - name: regression (3 seeds) and bug injection
+        run: PATH=/tmp/venv/bin:$PATH python3 tools/regress.py --seeds 3 --bugs --bug-seeds 3 --out /tmp/regress

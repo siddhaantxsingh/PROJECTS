@@ -10,4 +10,4 @@
 | Measured GPU performance / comparison with cuBLAS | BLOCKED | no GPU in the build environment |
 | Tensor-core (fp16/bf16/FP8) kernels | NOT IMPLEMENTED | — |
 | Backward passes | NOT IMPLEMENTED | — |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/cuda-kernels.yml` |
+| CI | VERIFIED | `.github/workflows/cuda-kernels.yml` (run 38525669876 green) |

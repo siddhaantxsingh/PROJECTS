@@ -33,7 +33,7 @@ Projects still being built (in build order):
 | InferX | [`inferx/`](inferx/) | | Not started |
 | MCP Fabric | [`mcp-fabric/`](mcp-fabric/) | Java / Spring | Not started (Maven is reachable now) |
 | EvalOps | [`evalops/`](evalops/) | Java / Spring | Not started (Maven is reachable now) |
-| UVM SoC verification | [`uvm-soc-verification/`](uvm-soc-verification/) | | Not started |
+| UVM SoC verification | [`uvm-soc-verification/`](uvm-soc-verification/) | SystemVerilog RTL, pyuvm, cocotb, Verilator | Done: 100 % functional coverage, 12/12 injected bugs caught |
 
 See [HANDOFF.md](HANDOFF.md) for the plan and what blocks each project.
 
