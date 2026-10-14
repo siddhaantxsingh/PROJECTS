@@ -11,4 +11,4 @@
 | Synthesis / area | PARTIALLY IMPLEMENTED | PE + post unit only; no timing |
 | Golden model | VERIFIED | `model/npu_ref.py` + its own tests |
 | Host interface | VERIFIED (simple port) | no AXI/DMA |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/int8-fp8-accelerator.yml` |
+| CI | VERIFIED | `.github/workflows/int8-fp8-accelerator.yml` (run 38518768091 green) |

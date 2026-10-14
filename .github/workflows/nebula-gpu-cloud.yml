@@ -1,0 +1,32 @@
+name: nebula-gpu-cloud
+on:
+  push:
+    paths: ["nebula-gpu-cloud/**", ".github/workflows/nebula-gpu-cloud.yml"]
+  pull_request:
+    paths: ["nebula-gpu-cloud/**", ".github/workflows/nebula-gpu-cloud.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: nebula-gpu-cloud }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "clippy, rustfmt" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: nebula-gpu-cloud }
+      - run: cargo build --locked --release --all-targets
+      - run: cargo test --locked --release
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --release --all-targets -- -D warnings
+      # small runs of both benchmarks as smoke tests (not performance gates)
+      - run: cargo run --locked --release --bin nebula-sim -- --jobs 500 --seeds 1 --nodes 8
+      - run: cargo run --locked --release --bin nebula-bench -- --nodes 8 --clients 4 --seconds 3 --rate 50
+  msrv:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: nebula-gpu-cloud }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89
+      - run: cargo build --locked
