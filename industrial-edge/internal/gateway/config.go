@@ -24,6 +24,24 @@ type MQTTConfig struct {
 	KeepAliveS  int    `json:"keepalive_s"`
 	BatchMax    int    `json:"batch_max"`
 	Inflight    int    `json:"inflight"`
+	// Security. TLS turns on MQTT over TLS (server verified against
+	// ca_file; cert_file/key_file add a client certificate). Username plus
+	// password_file (or the EDGE_MQTT_PASSWORD environment variable) send
+	// credentials. require_tls refuses to start without TLS. Credentials
+	// over plaintext are refused unless allow_plaintext_auth is set.
+	TLS                *TLSConfig `json:"tls"`
+	RequireTLS         bool       `json:"require_tls"`
+	Username           string     `json:"username"`
+	PasswordFile       string     `json:"password_file"`
+	AllowPlaintextAuth bool       `json:"allow_plaintext_auth"`
+}
+
+// TLSConfig holds PEM file paths for MQTT over TLS.
+type TLSConfig struct {
+	CAFile     string `json:"ca_file"`
+	CertFile   string `json:"cert_file"`
+	KeyFile    string `json:"key_file"`
+	ServerName string `json:"server_name"`
 }
 
 type QueueConfig struct {
@@ -33,12 +51,13 @@ type QueueConfig struct {
 }
 
 type DeviceConfig struct {
-	Name      string      `json:"name"`
-	Addr      string      `json:"addr"`
-	Unit      byte        `json:"unit"`
-	PollMs    int         `json:"poll_ms"`
-	TimeoutMs int         `json:"timeout_ms"`
-	Tags      []TagConfig `json:"tags"`
+	Name      string           `json:"name"`
+	Addr      string           `json:"addr"`
+	Unit      byte             `json:"unit"`
+	PollMs    int              `json:"poll_ms"`
+	TimeoutMs int              `json:"timeout_ms"`
+	Tags      []TagConfig      `json:"tags"`
+	Vibration *VibrationConfig `json:"vibration"`
 }
 
 type TagConfig struct {
@@ -113,6 +132,19 @@ func (c *Config) Validate() error {
 	if c.MQTT.Addr == "" || c.MQTT.TopicPrefix == "" {
 		return fmt.Errorf("config: mqtt.addr and mqtt.topic_prefix required")
 	}
+	if c.MQTT.RequireTLS && c.MQTT.TLS == nil {
+		return fmt.Errorf("config: mqtt.require_tls is set but mqtt.tls is missing: refusing plaintext MQTT")
+	}
+	if c.MQTT.TLS != nil && c.MQTT.TLS.CAFile == "" {
+		return fmt.Errorf("config: mqtt.tls.ca_file required (the broker certificate must be verified)")
+	}
+	if c.MQTT.TLS != nil && (c.MQTT.TLS.CertFile == "") != (c.MQTT.TLS.KeyFile == "") {
+		return fmt.Errorf("config: mqtt.tls.cert_file and key_file go together")
+	}
+	if c.MQTT.Username != "" && c.MQTT.TLS == nil && !c.MQTT.AllowPlaintextAuth {
+		return fmt.Errorf("config: mqtt.username without mqtt.tls would send the password in clear text " +
+			"(set allow_plaintext_auth only for local testing)")
+	}
 	if c.MQTT.ClientID == "" {
 		c.MQTT.ClientID = c.GatewayID
 	}
@@ -148,6 +180,12 @@ func (c *Config) Validate() error {
 			d.Unit = 1
 		}
 		tags := map[string]bool{}
+		if d.Vibration != nil {
+			if err := d.Vibration.validate(d.Name); err != nil {
+				return err
+			}
+			tags["fault"] = true // reserved pseudo-tag
+		}
 		for ti := range d.Tags {
 			t := &d.Tags[ti]
 			if !nameRE.MatchString(t.Name) || tags[t.Name] {

@@ -28,6 +28,7 @@ type Uplink struct {
 	mu       sync.Mutex
 	conn     *mqtt.Client
 	draining bool
+	lastErr  string // last connect error (run goroutine only)
 	// LastAckLagMs is now - timestamp of the newest record in the last acked batch.
 	LastAckLagMs int64
 }
@@ -55,15 +56,17 @@ type inflight struct {
 
 func (u *Uplink) run() {
 	defer close(u.done)
-	cfg := u.g.Cfg.MQTT
 	backoff := 100 * time.Millisecond
 	for {
 		if u.finished() {
 			return
 		}
-		c, err := mqtt.Connect(mqtt.Options{Addr: cfg.Addr, ClientID: cfg.ClientID, KeepAlive: time.Duration(cfg.KeepAliveS) * time.Second,
-			CleanSession: true, MaxInflight: cfg.Inflight})
+		c, err := mqtt.Connect(u.g.mqttOpts)
 		if err != nil {
+			if msg := err.Error(); msg != u.lastErr {
+				log.Printf("uplink: connect: %v", err) // logged once per distinct error
+				u.lastErr = msg
+			}
 			if !u.sleep(backoff) {
 				return
 			}
@@ -73,6 +76,7 @@ func (u *Uplink) run() {
 			continue
 		}
 		backoff = 100 * time.Millisecond
+		u.lastErr = ""
 		u.g.Stats.Reconnects.Add(1)
 		u.mu.Lock()
 		u.conn = c

@@ -12,6 +12,7 @@ package mqtt
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -55,6 +56,23 @@ type Options struct {
 	// MaxInflight bounds unacknowledged QoS 1 publishes (0 = 64).
 	MaxInflight int
 	OnMessage   func(Message)
+	// TLS, when set, makes the connection TLS (MQTT over TLS, usually port
+	// 8883). The server certificate is verified against TLS.RootCAs (or the
+	// system pool); a client certificate in TLS.Certificates is presented
+	// when the broker asks for one.
+	TLS *tls.Config
+	// Username/Password are sent in CONNECT when Username is non-empty.
+	Username string
+	Password string
+}
+
+// ConnackError is a CONNACK with a non-zero return code.
+type ConnackError struct{ Code byte }
+
+func (e *ConnackError) Error() string {
+	msg := map[byte]string{1: "unacceptable protocol version", 2: "identifier rejected", 3: "server unavailable",
+		4: "bad user name or password", 5: "not authorized"}[e.Code]
+	return fmt.Sprintf("mqtt: connection refused, code %d (%s)", e.Code, msg)
 }
 
 // Ack resolves when a QoS 1 publish is acknowledged (nil) or the connection dies (error).
@@ -93,7 +111,27 @@ func Connect(o Options) (*Client, error) {
 	if o.MaxInflight == 0 {
 		o.MaxInflight = 64
 	}
-	conn, err := net.DialTimeout("tcp", o.Addr, o.DialTimeout)
+	var conn net.Conn
+	var err error
+	if o.TLS != nil {
+		d := &net.Dialer{Timeout: o.DialTimeout}
+		cfg := o.TLS.Clone()
+		if cfg.MinVersion == 0 {
+			cfg.MinVersion = tls.VersionTLS12
+		}
+		if cfg.ServerName == "" {
+			if host, _, e := net.SplitHostPort(o.Addr); e == nil {
+				cfg.ServerName = host
+			}
+		}
+		tc, e := tls.DialWithDialer(d, "tcp", o.Addr, cfg)
+		if e != nil {
+			return nil, fmt.Errorf("mqtt: tls: %w", e)
+		}
+		conn, err = tc, nil
+	} else {
+		conn, err = net.DialTimeout("tcp", o.Addr, o.DialTimeout)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -106,9 +144,21 @@ func Connect(o Options) (*Client, error) {
 	if o.CleanSession {
 		flags |= 0x02
 	}
+	if o.Username != "" {
+		flags |= 0x80
+		if o.Password != "" {
+			flags |= 0x40
+		}
+	}
 	vh = append(vh, 4, flags, 0, 0)
 	binary.BigEndian.PutUint16(vh[len(vh)-2:], uint16(o.KeepAlive/time.Second))
 	vh = appendString(vh, o.ClientID)
+	if o.Username != "" {
+		vh = appendString(vh, o.Username)
+		if o.Password != "" {
+			vh = appendString(vh, o.Password)
+		}
+	}
 	if err := c.writePacket(pConnect<<4, vh); err != nil {
 		conn.Close()
 		return nil, err
@@ -126,7 +176,7 @@ func Connect(o Options) (*Client, error) {
 	}
 	if body[1] != 0 {
 		conn.Close()
-		return nil, fmt.Errorf("mqtt: connection refused, code %d", body[1])
+		return nil, &ConnackError{Code: body[1]}
 	}
 	_ = conn.SetReadDeadline(time.Time{})
 	go c.readLoop(br)

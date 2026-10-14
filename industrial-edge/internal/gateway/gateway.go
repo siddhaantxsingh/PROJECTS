@@ -23,6 +23,7 @@ import (
 
 	"industrial-edge/internal/analytics"
 	"industrial-edge/internal/modbus"
+	"industrial-edge/internal/mqtt"
 	"industrial-edge/internal/queue"
 )
 
@@ -31,7 +32,7 @@ func bytesReader(b []byte) *bytes.Reader { return bytes.NewReader(b) }
 // Record is the JSON form of one queued item.
 type Record struct {
 	Seq     uint64  `json:"seq"`
-	Kind    string  `json:"kind"` // sample | quality | alarm | anomaly
+	Kind    string  `json:"kind"` // sample | quality | alarm | anomaly | prediction | drift
 	Device  string  `json:"dev"`
 	Tag     string  `json:"tag,omitempty"`
 	T       int64   `json:"t"`
@@ -40,6 +41,8 @@ type Record struct {
 	State   string  `json:"state,omitempty"`
 	Z       float64 `json:"z,omitempty"`
 	Msg     string  `json:"msg,omitempty"`
+	Class   string  `json:"class,omitempty"` // predicted fault class (prediction, fault alarm)
+	Conf    float64 `json:"conf,omitempty"`  // model confidence (softmax maximum)
 }
 
 // Stats are exported as Prometheus metrics.
@@ -47,6 +50,8 @@ type Stats struct {
 	Polls, PollErrors, Samples, Archived, Events atomic.Uint64
 	Published, PublishErrors, Reconnects         atomic.Uint64
 	ModbusRequests                               atomic.Uint64
+	Inferences, InferenceNanos, InferenceTorn    atomic.Uint64
+	DriftAlerts                                  atomic.Uint64
 }
 
 type tagState struct {
@@ -75,6 +80,7 @@ type device struct {
 	tags   map[string]*tagState
 	up     bool
 	lastOK atomic.Int64
+	vib    *vibState
 }
 
 // Gateway is the running pipeline.
@@ -89,15 +95,21 @@ type Gateway struct {
 	stop    chan struct{}
 	wg      sync.WaitGroup
 	uplink  *Uplink
+	// mqttOpts: connection options incl. TLS and credentials
+	mqttOpts mqtt.Options
 }
 
 // New opens the queue and prepares devices (no I/O to devices yet).
 func New(cfg *Config) (*Gateway, error) {
+	mo, err := mqttOptions(cfg.MQTT)
+	if err != nil {
+		return nil, err
+	}
 	q, err := queue.Open(cfg.DataDir+"/queue", queue.Options{SegmentBytes: cfg.Queue.SegmentBytes, MaxBytes: cfg.Queue.MaxBytes})
 	if err != nil {
 		return nil, err
 	}
-	g := &Gateway{Cfg: cfg, Q: q, stop: make(chan struct{}), Now: func() int64 { return time.Now().UnixMilli() }}
+	g := &Gateway{Cfg: cfg, Q: q, mqttOpts: mo, stop: make(chan struct{}), Now: func() int64 { return time.Now().UnixMilli() }}
 	for _, dc := range cfg.Devices {
 		d := &device{cfg: dc, client: modbus.NewClient(dc.Addr, dc.Unit, time.Duration(dc.TimeoutMs)*time.Millisecond),
 			tags: map[string]*tagState{}}
@@ -123,6 +135,9 @@ func New(cfg *Config) (*Gateway, error) {
 			ts = append(ts, s)
 		}
 		d.blocks = coalesce(ts)
+		if dc.Vibration != nil {
+			d.vib = newVibState(d)
+		}
 		g.devices = append(g.devices, d)
 	}
 	return g, nil
@@ -340,6 +355,12 @@ func (g *Gateway) Start() {
 				}
 			}
 		}()
+	}
+	for _, d := range g.devices {
+		if d.vib != nil {
+			g.wg.Add(1)
+			go g.vibLoop(d)
+		}
 	}
 	g.wg.Add(1)
 	go func() {

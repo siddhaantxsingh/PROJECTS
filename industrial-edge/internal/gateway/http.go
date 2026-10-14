@@ -30,6 +30,11 @@ func (g *Gateway) Handler() http.Handler {
 		c("uplink_errors_total", "uplink connection failures", s.PublishErrors.Load())
 		c("mqtt_connects_total", "successful MQTT connections", s.Reconnects.Load())
 		c("queue_dropped_total", "records dropped unacknowledged by the disk cap", g.Q.Dropped)
+		c("inferences_total", "edge fault-classifier inferences", s.Inferences.Load())
+		fmt.Fprintf(&b, "# HELP edge_inference_seconds_total time spent in edge inference (features + INT8 MLP)\n"+
+			"# TYPE edge_inference_seconds_total counter\nedge_inference_seconds_total %g\n", float64(s.InferenceNanos.Load())/1e9)
+		c("inference_torn_total", "vibration windows discarded because they changed during the read", s.InferenceTorn.Load())
+		c("drift_alerts_total", "input (PSI) and confidence (Page-Hinkley) drift alerts", s.DriftAlerts.Load())
 		gauge("queue_backlog", "unacknowledged records", float64(g.Q.Backlog()))
 		gauge("queue_disk_bytes", "bytes in queue segments", float64(g.Q.DiskBytes()))
 		up := 0.0

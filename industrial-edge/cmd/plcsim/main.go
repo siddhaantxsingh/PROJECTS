@@ -10,6 +10,8 @@
 // Holding register 0: outflow valve position 0-100 % (writable).
 // Coil 0: inflow pump running (controlled by the simulated PLC logic with
 // 40-60 % hysteresis; writable to force).
+// Input registers 100-1126: hoist vibration sensor (see internal/plcsim),
+// enabled with -hoist <condition>.
 // -spike-every N injects a +25 °C sensor spike (5 updates long) every N updates.
 package main
 
@@ -18,8 +20,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
+	"industrial-edge/internal/hoistsim"
 	"industrial-edge/internal/plcsim"
 )
 
@@ -28,8 +32,23 @@ func main() {
 	hz := flag.Float64("hz", 50, "process update rate")
 	spike := flag.Int("spike-every", 0, "inject a temperature spike every N updates (0 = never)")
 	seed := flag.Int64("seed", 1, "noise seed")
+	hoist := flag.String("hoist", "", "simulate a hoist vibration sensor with this condition: "+strings.Join(hoistsim.ClassNames[:], ", "))
+	sev := flag.Float64("hoist-severity", 0.7, "fault severity 0..1")
+	gain := flag.Float64("hoist-gain", 1, "accelerometer gain multiplier (inject sensor drift)")
 	flag.Parse()
 	p := plcsim.New(*seed, *spike)
+	if *hoist != "" {
+		c := -1
+		for i, n := range hoistsim.ClassNames {
+			if n == *hoist {
+				c = i
+			}
+		}
+		if c < 0 {
+			log.Fatalf("unknown -hoist %q", *hoist)
+		}
+		p.SetHoist(c, *sev, *gain)
+	}
 	a, err := p.Listen(*addr, *hz)
 	if err != nil {
 		log.Fatal(err)

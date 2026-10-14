@@ -81,3 +81,34 @@ func TestConfigValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigRefusesPlaintextWhenTLSRequired(t *testing.T) {
+	base := func() *Config {
+		return &Config{GatewayID: "gw", DataDir: "d", MQTT: MQTTConfig{Addr: "b:8883", TopicPrefix: "p"},
+			Devices: []DeviceConfig{{Name: "d1", Addr: "x:502"}}}
+	}
+	c := base()
+	c.MQTT.RequireTLS = true
+	if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "refusing plaintext") {
+		t.Fatalf("require_tls without tls: %v", err)
+	}
+	c = base()
+	c.MQTT.Username = "gw1"
+	if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "clear text") {
+		t.Fatalf("credentials over plaintext: %v", err)
+	}
+	c = base()
+	c.MQTT.TLS = &TLSConfig{}
+	if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "ca_file") {
+		t.Fatalf("tls without CA: %v", err)
+	}
+	c = base()
+	c.MQTT.RequireTLS, c.MQTT.Username = true, "gw1"
+	c.MQTT.TLS = &TLSConfig{CAFile: "ca.pem", CertFile: "c.pem", KeyFile: "c.key"}
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(c); err == nil || !strings.Contains(err.Error(), "ca.pem") {
+		t.Fatalf("missing CA file must fail at start-up: %v", err)
+	}
+}

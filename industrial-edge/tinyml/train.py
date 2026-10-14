@@ -220,6 +220,11 @@ def write_go(lo, mul, layers, ref_hist, s_o, z_o, cmean, cstd):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as fh:
         fh.write("\n".join(s) + "\n")
+    import shutil
+    import subprocess
+    gofmt = shutil.which("gofmt") or "/usr/local/go/bin/gofmt"
+    if os.path.exists(gofmt):
+        subprocess.run([gofmt, "-w", path], check=True)
 
 
 if __name__ == "__main__":
