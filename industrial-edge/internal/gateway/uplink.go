@@ -58,10 +58,8 @@ func (u *Uplink) run() {
 	cfg := u.g.Cfg.MQTT
 	backoff := 100 * time.Millisecond
 	for {
-		select {
-		case <-u.stop:
+		if u.finished() {
 			return
-		default:
 		}
 		c, err := mqtt.Connect(mqtt.Options{Addr: cfg.Addr, ClientID: cfg.ClientID, KeepAlive: time.Duration(cfg.KeepAliveS) * time.Second,
 			CleanSession: true, MaxInflight: cfg.Inflight})
@@ -92,13 +90,26 @@ func (u *Uplink) run() {
 	}
 }
 
-func (u *Uplink) sleep(d time.Duration) bool {
+// finished: stop was requested and there is nothing left to drain (or the
+// drain timed out). While draining, the uplink keeps reconnecting.
+func (u *Uplink) finished() bool {
 	select {
 	case <-u.stop:
+		return !u.isDraining() || u.g.Q.Backlog() == 0
+	default:
 		return false
-	case <-time.After(d):
-		return true
 	}
+}
+
+func (u *Uplink) sleep(d time.Duration) bool {
+	deadline := time.Now().Add(d)
+	for time.Now().Before(deadline) {
+		if u.finished() {
+			return false
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	return true
 }
 
 // session publishes until the connection fails (error) or stop (nil).

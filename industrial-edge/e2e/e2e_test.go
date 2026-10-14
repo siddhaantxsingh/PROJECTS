@@ -192,8 +192,14 @@ func TestNoLossAcrossBrokerOutageAndGatewayKill(t *testing.T) {
 	gw = startGW(t, cfg)
 	time.Sleep(1500 * time.Millisecond)
 
-	// 3. graceful stop drains the queue
+	// 3. graceful stop while the broker is down: the gateway keeps
+	// reconnecting during its drain window and empties the queue once the
+	// broker returns
+	b.Stop()
+	time.Sleep(300 * time.Millisecond)
 	gw.Process.Signal(syscall.SIGTERM)
+	time.Sleep(time.Second)
+	b.Restart(t)
 	if err := gw.Wait(); err != nil {
 		t.Fatalf("gateway exit: %v", err)
 	}
