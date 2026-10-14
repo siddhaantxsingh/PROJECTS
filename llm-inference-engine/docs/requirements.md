@@ -14,4 +14,4 @@
 | OpenAI-style HTTP server with streaming, disconnect handling | VERIFIED | `tests/server.rs` |
 | Pretrained open-weights model (e.g. Llama) | BLOCKED | huggingface.co unreachable; model trained here instead |
 | GPU execution | BLOCKED | no GPU |
-| CI | IMPLEMENTED BUT UNVERIFIED | `.github/workflows/llm-inference-engine.yml` |
+| CI | VERIFIED | `.github/workflows/llm-inference-engine.yml` (run 38560348688 green) |

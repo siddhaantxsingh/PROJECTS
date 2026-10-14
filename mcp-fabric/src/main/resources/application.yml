@@ -1,0 +1,16 @@
+server:
+  port: 8090
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+spring:
+  threads:
+    virtual:
+      enabled: true
+fabric:
+  audit-file: data/audit.jsonl
+  breaker:
+    threshold: 3
+    cooldown: 5s

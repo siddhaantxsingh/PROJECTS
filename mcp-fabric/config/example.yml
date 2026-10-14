@@ -1,0 +1,32 @@
+# java -jar target/mcp-fabric-0.1.0.jar --spring.config.additional-location=config/example.yml
+fabric:
+  audit-file: data/audit.jsonl
+  session-idle-timeout: 30m
+  page-size: 50
+  admin-key-sha256: ba30f59c2ec033f40fcd0f8dc89c9765a4d4ed51ee5140e915a8b3ccd2b43986  # sha256 of "change-me-admin"
+  breaker:
+    threshold: 3
+    cooldown: 10s
+  upstreams:
+    - name: files
+      type: stdio
+      command: [java, -cp, target/classes, dev.siddhant.mcpfabric.demo.DemoServer, --name, files]
+      timeout: 30s
+    - name: search
+      type: http
+      url: http://127.0.0.1:9001/mcp
+      headers:
+        X-Upstream-Token: example
+      timeout: 10s
+  clients:
+    - id: ide
+      key-sha256: 1cece9be70a6b037ff18a5bc5abb0e287184bff35c0b89ec11967863358acaa4  # sha256 of "change-me-ide"
+      allow: ["*"]
+      deny: ["*__crash"]
+      rate-per-minute: 600
+      burst: 60
+    - id: ci-bot
+      key-sha256: cebfeb99776468dde3abf85d7cb248a029132a6b5102c77a171bea28c2e11b7d  # sha256 of "change-me-ci"
+      allow: ["search__*"]
+      rate-per-minute: 60
+      burst: 10

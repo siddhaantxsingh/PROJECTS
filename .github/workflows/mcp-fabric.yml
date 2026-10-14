@@ -1,0 +1,16 @@
+name: mcp-fabric
+on:
+  push:
+    paths: ["mcp-fabric/**", ".github/workflows/mcp-fabric.yml"]
+  pull_request:
+    paths: ["mcp-fabric/**", ".github/workflows/mcp-fabric.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: mcp-fabric }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - run: mvn -B verify
