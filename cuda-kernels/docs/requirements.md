@@ -20,4 +20,4 @@ Evidence logs from 2026-10-15 are in [evidence/2026-10-15/](evidence/2026-10-15/
 | Comparison with cuBLAS | NOT IMPLEMENTED | the harness links only cudart, not cuBLAS |
 | bf16 / FP8 tensor-core kernels, `wgmma` (Hopper) | NOT IMPLEMENTED | — |
 | Attention backward | NOT IMPLEMENTED | — |
-| CI | VERIFIED for the previous commit (run 38525669876); this commit: see the README | `.github/workflows/cuda-kernels.yml` |
+| CI (emulator tests, sm_80/89/90 build, HMMA check, sm_80 + sm_89 bench link) | VERIFIED | run 38821227301 green on commit bd5b12a; `.github/workflows/cuda-kernels.yml` |
