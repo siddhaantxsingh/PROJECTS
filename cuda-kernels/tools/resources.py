@@ -8,6 +8,8 @@ import sys
 # per-SM limits (CUDA C Programming Guide, compute capability tables)
 LIMITS = {
     "sm_80": dict(regs=65536, threads=2048, blocks=32, smem=167936, reserved_smem=1024, name="A100 (sm_80)"),
+    # compute capability 8.9 (Ada, e.g. RTX 4060): 1536 threads, 24 blocks, 100 KB shared memory per SM
+    "sm_89": dict(regs=65536, threads=1536, blocks=24, smem=102400, reserved_smem=1024, name="RTX 40xx / L4 (sm_89)"),
     "sm_90": dict(regs=65536, threads=2048, blocks=32, smem=233472, reserved_smem=1024, name="H100 (sm_90)"),
 }
 # threads per block used by the launchers in include/kc/*.cuh
@@ -15,7 +17,8 @@ BLOCK = {
     "reduce_atomic_kernel": 256, "reduce_smem_kernel": 256, "reduce_partials_kernel": 256, "reduce_final_kernel": 256,
     "transpose_naive_kernel": 256, "transpose_tiled_kernel": 256, "sgemm_naive_kernel": 256, "sgemm_smem_kernel": 1024,
     "sgemm_reg_kernel": 256, "softmax_warp_kernel": 128, "layernorm_warp_kernel": 128, "flash_attn_kernel": 64,
-    "attn_naive_kernel": 64,
+    "attn_naive_kernel": 64, "hgemm_mma_kernel": 256, "mma_probe_kernel": 32, "softmax_bwd_warp_kernel": 128,
+    "layernorm_bwd_rows_kernel": 128, "layernorm_bwd_cols_kernel": 256,
 }
 
 

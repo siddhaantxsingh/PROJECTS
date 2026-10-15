@@ -9,7 +9,10 @@
 #include <vector>
 
 #include "kc/attention.cuh"
+#include "kc/backward.cuh"
 #include "kc/gemm.cuh"
+#include "kc/half.h"
+#include "kc/hgemm.cuh"
 #include "kc/reduce.cuh"
 #include "kc/softmax.cuh"
 #include "kc/transpose.cuh"
@@ -97,12 +100,27 @@ int main() {
         report("sgemm", "register 8x8, split", sh, f, b, [&] { kc::sgemm_reg<true>(m, n, k, 1, A.data(), B.data(), 0, C.data()); });
     }
     {
+        int m = 256, n = 256, k = 256;
+        auto A = randv(size_t(m) * k), B = randv(size_t(k) * n);
+        std::vector<uint16_t, Aligned<uint16_t>> hA(A.size()), hB(B.size());
+        for (size_t i = 0; i < A.size(); i++) hA[i] = kc::f32_to_f16(A[i]);
+        for (size_t i = 0; i < B.size(); i++) hB[i] = kc::f32_to_f16(B[i]);
+        Vec C(size_t(m) * n);
+        double f = 2.0 * m * n * k, b = 2.0 * (m * k + k * n) + 4.0 * m * n;
+        report("hgemm", "tensor-core mma.m16n8k16 + ldmatrix (fp16 in, fp32 acc)", "256x256x256", f, b,
+               [&] { kc::hgemm_mma(m, n, k, 1, hA.data(), hB.data(), 0, C.data()); });
+    }
+    {
         int rows = 256, cols = 1024;
         auto x = randv(size_t(rows) * cols), g = randv(cols), b = randv(cols);
         Vec y(x.size());
         std::string sh = "256x1024";
         report("rows", "softmax (online)", sh, 0, 8.0 * rows * cols, [&] { kc::softmax(x.data(), y.data(), rows, cols); });
         report("rows", "layernorm (Welford)", sh, 0, 8.0 * rows * cols, [&] { kc::layernorm<false>(x.data(), g.data(), b.data(), y.data(), rows, cols); });
+        Vec dy = randv(x.size()), dx(x.size()), dg(cols), db(cols), mu(rows), rs(rows);
+        report("rows", "softmax backward", sh, 0, 12.0 * rows * cols, [&] { kc::softmax_backward(y.data(), dy.data(), dx.data(), rows, cols); });
+        report("rows", "layernorm backward (dx, dgamma, dbeta)", sh, 0, 12.0 * rows * cols,
+               [&] { kc::layernorm_backward(x.data(), g.data(), dy.data(), dx.data(), dg.data(), db.data(), mu.data(), rs.data(), rows, cols); });
     }
     {
         int bh = 1, n = 512;

@@ -25,4 +25,8 @@ jobs:
       - run: make ptx
       - name: no stack frames or spills
         run: "! grep -E ' [1-9][0-9]* bytes (stack frame|spill)' build/device/ptxas_*.txt"
-      - run: make gpu-bench
+      - name: tensor-core kernels contain HMMA on sm_80, sm_89, sm_90 (make ptx fails otherwise)
+        run: grep -c HMMA build/device/sass_sm_89.txt
+      - run: make gpu-bench CUDA_ARCH=sm_80
+      - run: make gpu-bench CUDA_ARCH=sm_89
+      - run: bash -n tools/owner_rtx4060.sh

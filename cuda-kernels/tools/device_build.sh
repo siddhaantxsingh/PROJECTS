@@ -6,7 +6,7 @@
 set -eu
 OUT=${1:-build/device}
 shift || true
-ARCHS=${*:-sm_80 sm_90}
+ARCHS=${*:-sm_80 sm_89 sm_90}
 CUDA_ROOT=${CUDA_ROOT:-build/cuda-root}
 mkdir -p "$OUT"
 # clang 18's CUDA mode cannot parse GCC 14's <limits> (__float128); use GCC 13's

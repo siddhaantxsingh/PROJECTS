@@ -37,6 +37,33 @@ __global__ void softmax_warp_kernel(const float* __restrict__ x, float* __restri
     for (int c = lane; c < cols; c += 32) KC_G(yr[c]) = expf(KC_G(xr[c]) - m) * inv;
 }
 
+// Mean and (biased) variance of one row, computed by a whole warp: Welford
+// per lane, then pairwise merges with shuffles (Chan et al.).
+__device__ __forceinline__ void welford_row(const float* xr, int cols, int lane, float* mean, float* var) {
+    float n = 0.0f, mu = 0.0f, m2 = 0.0f;
+    for (int c = lane; c < cols; c += 32) {
+        float v = KC_G(xr[c]);
+        n += 1.0f;
+        float d = v - mu;
+        mu += d / n;
+        m2 += d * (v - mu);
+    }
+    for (int o = 16; o > 0; o >>= 1) {
+        float nb = __shfl_xor_sync(FULL_MASK, n, o);
+        float mb = __shfl_xor_sync(FULL_MASK, mu, o);
+        float m2b = __shfl_xor_sync(FULL_MASK, m2, o);
+        float nn = n + nb;
+        if (nn > 0.0f) {
+            float d = mb - mu;
+            mu += d * (nb / nn);
+            m2 += m2b + d * d * (n * nb / nn);
+            n = nn;
+        }
+    }
+    *mean = mu;
+    *var = m2 / cols;
+}
+
 // LayerNorm with Welford statistics merged across lanes (Chan et al.).
 // NAIVE = true uses E[x^2] - E[x]^2 in fp32 instead, which loses all
 // precision when |mean| >> std (kept as a demonstration).
@@ -60,28 +87,7 @@ __global__ void layernorm_warp_kernel(const float* __restrict__ x, const float* 
         mean = s / cols;
         var = fmaxf(ss / cols - mean * mean, 0.0f);
     } else {
-        float n = 0.0f, mu = 0.0f, m2 = 0.0f;
-        for (int c = lane; c < cols; c += 32) {
-            float v = KC_G(xr[c]);
-            n += 1.0f;
-            float d = v - mu;
-            mu += d / n;
-            m2 += d * (v - mu);
-        }
-        for (int o = 16; o > 0; o >>= 1) {
-            float nb = __shfl_xor_sync(FULL_MASK, n, o);
-            float mb = __shfl_xor_sync(FULL_MASK, mu, o);
-            float m2b = __shfl_xor_sync(FULL_MASK, m2, o);
-            float nn = n + nb;
-            if (nn > 0.0f) {
-                float d = mb - mu;
-                mu += d * (nb / nn);
-                m2 += m2b + d * d * (n * nb / nn);
-                n = nn;
-            }
-        }
-        mean = mu;
-        var = m2 / cols;
+        welford_row(xr, cols, lane, &mean, &var);
     }
     float rstd = rsqrtf(var + eps);
     float* yr = y + size_t(row) * cols;

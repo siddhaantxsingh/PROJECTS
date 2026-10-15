@@ -36,6 +36,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "half.h"
+
 #define __global__
 #define __device__
 #define __host__
@@ -50,6 +52,7 @@ struct dim3 {
 };
 struct alignas(16) float4 { float x, y, z, w; };
 struct alignas(8) float2 { float x, y; };
+struct alignas(16) uint4 { uint32_t x, y, z, w; };
 inline float4 make_float4(float x, float y, float z, float w) { return {x, y, z, w}; }
 
 using std::max;
@@ -109,6 +112,7 @@ struct Block {
     std::unique_ptr<std::barrier<>> bar;
     std::vector<std::unique_ptr<std::barrier<>>> warp_bar;
     std::vector<std::array<uint64_t, 32>> shfl;
+    std::vector<std::array<std::array<uint32_t, 8>, 32>> wx;  // per-warp exchange for ldmatrix / mma
     std::atomic<uint64_t> barriers{0};
 };
 inline Block* g_block = nullptr;
@@ -134,6 +138,83 @@ T shfl_generic(T v, int src_lane) {
     }
     g_block->warp_bar[tl_warp]->arrive_and_wait();
     return out;
+}
+
+template <class T>
+T& touch(T& x, uint8_t space, const char* file, int line);
+
+// ---- warp-level matrix instructions (models of the PTX ISA definitions) ----
+//
+// ldmatrix.sync.aligned.m8n8.xN[.trans].shared.b16: lanes 8i..8i+7 give the
+// addresses of the 8 rows (16 bytes each) of matrix i. Lane l receives, in
+// register i, two 16-bit elements of matrix i: row l/4, columns 2(l%4) and
+// 2(l%4)+1 (low half first). With .trans the matrix is transposed first,
+// so the elements are rows 2(l%4) and 2(l%4)+1 of column l/4.
+struct alignas(16) Row16 { uint32_t w[4]; };
+inline void ldmatrix(uint32_t* r, int nmat, bool trans, const uint16_t* p) {
+    auto& buf = g_block->wx[tl_warp];
+    uintptr_t v = reinterpret_cast<uintptr_t>(p);
+    std::memcpy(&buf[tl_lane][0], &v, sizeof v);
+    // traced as one 16-byte shared access per lane: 8 lanes per phase, like the hardware's 8 rows per matrix
+    if (tl_lane < unsigned(8 * nmat)) touch(*reinterpret_cast<Row16*>(const_cast<uint16_t*>(p)), 1, "ldmatrix", 0);
+    g_block->warp_bar[tl_warp]->arrive_and_wait();
+    auto row = [&](unsigned lane) {
+        uintptr_t a;
+        std::memcpy(&a, &buf[lane][0], sizeof a);
+        return reinterpret_cast<const uint16_t*>(a);
+    };
+    unsigned g = tl_lane / 4, t = tl_lane % 4;
+    for (int i = 0; i < nmat; i++) {
+        uint16_t lo, hi;
+        if (!trans) {
+            lo = row(8 * i + g)[2 * t];
+            hi = row(8 * i + g)[2 * t + 1];
+        } else {
+            lo = row(8 * i + 2 * t)[g];
+            hi = row(8 * i + 2 * t + 1)[g];
+        }
+        r[i] = uint32_t(lo) | (uint32_t(hi) << 16);
+    }
+    g_block->warp_bar[tl_warp]->arrive_and_wait();
+}
+
+// mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32, D = A * B + C with
+// A 16x16, B 16x8, C/D 16x8. Fragment layouts (PTX ISA, "Matrix Fragments for
+// mma.m16n8k16 with floating point type"), g = lane / 4, t = lane % 4, each
+// .b32 register holding two fp16 values, lower column/row index in the low half:
+//   A: a0 = (g, 2t..2t+1)  a1 = (g+8, 2t..)  a2 = (g, 2t+8..)  a3 = (g+8, 2t+8..)
+//   B: b0 = (k = 2t..2t+1, n = g)            b1 = (k = 2t+8..2t+9, n = g)
+//   C, D: c0, c1 = (g, 2t), (g, 2t+1)        c2, c3 = (g+8, 2t), (g+8, 2t+1)
+// fp16 x fp16 products are exact in fp32; they are added to c in fp32, in k
+// order. The hardware's internal summation order and rounding are not
+// specified by NVIDIA, so this is a model; the tests' tolerance covers both.
+inline void mma_m16n8k16(float* d, const uint32_t* a, const uint32_t* b) {
+    auto& buf = g_block->wx[tl_warp];
+    for (int i = 0; i < 4; i++) buf[tl_lane][i] = a[i];
+    buf[tl_lane][4] = b[0];
+    buf[tl_lane][5] = b[1];
+    g_block->warp_bar[tl_warp]->arrive_and_wait();
+    float A[16][16], B[16][8];
+    for (unsigned l = 0; l < 32; l++) {
+        unsigned g = l / 4, t = l % 4;
+        auto lo = [](uint32_t v) { return kc::f16_to_f32(uint16_t(v & 0xffffu)); };
+        auto hi = [](uint32_t v) { return kc::f16_to_f32(uint16_t(v >> 16)); };
+        const auto& f = buf[l];
+        A[g][2 * t] = lo(f[0]);         A[g][2 * t + 1] = hi(f[0]);
+        A[g + 8][2 * t] = lo(f[1]);     A[g + 8][2 * t + 1] = hi(f[1]);
+        A[g][2 * t + 8] = lo(f[2]);     A[g][2 * t + 9] = hi(f[2]);
+        A[g + 8][2 * t + 8] = lo(f[3]); A[g + 8][2 * t + 9] = hi(f[3]);
+        B[2 * t][g] = lo(f[4]);         B[2 * t + 1][g] = hi(f[4]);
+        B[2 * t + 8][g] = lo(f[5]);     B[2 * t + 9][g] = hi(f[5]);
+    }
+    g_block->warp_bar[tl_warp]->arrive_and_wait();
+    unsigned g = tl_lane / 4, t = tl_lane % 4;
+    for (int i = 0; i < 4; i++) {
+        unsigned r = g + (i >= 2 ? 8 : 0), c = 2 * t + (i & 1);
+        float acc = d[i];
+        for (int k = 0; k < 16; k++) acc += A[r][k] * B[k][c];
+        d[i] = acc;
+    }
 }
 
 template <class T>
@@ -265,6 +346,7 @@ void launch(dim3 grid, dim3 block, Kernel kernel, Args... args) {
                 b.bar = std::make_unique<std::barrier<>>(n);
                 for (unsigned w = 0; w < nwarps; w++) b.warp_bar.push_back(std::make_unique<std::barrier<>>(std::min(32u, n - 32 * w)));
                 b.shfl.resize(nwarps);
+                b.wx.resize(nwarps);
                 g_block = &b;
                 std::vector<std::vector<Access>> logs(g_trace ? n : 0);
                 std::function<void(unsigned)> body = [&](unsigned t) {
