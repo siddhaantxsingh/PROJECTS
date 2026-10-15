@@ -23,7 +23,7 @@
 | Minimum vertical slice first | VERIFIED | upload → question → grounded cited answer (E2E) |
 | Beta for students/faculty | NOT IMPLEMENTED | plan only (`docs/beta-plan.md`); requires owner |
 | Real users / engagement | NOT IMPLEMENTED | none exist; not fabricated |
-| LLM-generated answers | BLOCKED | no API key / model access in build environment |
-| Containerised deployment | IMPLEMENTED BUT UNVERIFIED | Dockerfile not built |
+| LLM-generated answers | VERIFIED (local small model) | `CAMPUS_LLM_PROVIDER=llamacpp` (Qwen2.5-0.5B-Instruct via Groundwork's `LlamaCppProvider` + grounding enforcement); browser E2E `e2e/campus-llm.spec.ts` passed (`docs/evidence/2026-10-15/e2e-llm.log`, `docs/screenshots/ask-llm.png`); API check `docs/evidence/2026-10-15/api-llm.log`. Quality of a 0.5B model is low (see Groundwork benchmarks); extractive stays the default |
+| Containerised deployment | VERIFIED (image + smoke test) | `scripts/docker_build.sh`, `scripts/docker_smoke.sh`; `docs/evidence/2026-10-15/docker-build.log`, `docker-smoke-default.log`. Not deployed anywhere |
 | CI | VERIFIED | `../.github/workflows/campus-ai-os.yml` green on GitHub Actions (run 38478453632), incl. Playwright E2E |
 | LICENSE | BLOCKED | owner decision |

@@ -28,10 +28,15 @@ curl -H "Authorization: Bearer <key>" -H 'content-type: application/json' \
 | `GW_RATE_PER_MIN` | 120 | requests per minute per key |
 | `GW_DIM` | 256 | embedding column dimension (fixed per database) |
 | `GW_LLM_BASE_URL`, `GW_LLM_API_KEY`, `GW_LLM_MODEL`, `GW_LLM_PRICE_IN/OUT` | unset | OpenAI-compatible provider (not exercised against a real model here) |
+| `GW_LLM_PROVIDER` | `extractive` | `llamacpp` = local GGUF model (`GW_LLM_GGUF`, default `qwen2.5-0.5b`), or `openai` |
+| `GW_ENFORCE_GROUNDING` | `1` for llamacpp | drop unsupported sentences, abstain if none remain |
+| `GW_EMBEDDER` | unset | `nomic` = nomic-embed-text-v1.5 (needs `GW_DIM=768`; existing vectors are re-embedded on load) |
+| `GW_RERANKER`, `GW_RERANK_DEPTH` | unset, 10 | `qwen3` = Qwen3-Reranker-0.6B over the top k (slow on CPU) |
+| `GW_MODEL_DIR`, `GW_THREADS` | `/home/user/models`, all cores | where `scripts/fetch_models.py` put the GGUF files; llama.cpp threads |
 
 ## Container
 
-`Dockerfile` and `docker-compose.yml` are provided. **They were not built or run in the build sandbox** (Docker Hub is unreachable there). The compose file uses the official `pgvector/pgvector:pg16` and `redis:7` images.
+`scripts/docker_build.sh [TAG] [LOCAL_MODELS]` builds the image (it passes a proxy CA as a BuildKit secret if one exists; nothing is stored in the image). `scripts/docker_smoke.sh [IMAGE]` runs it against PostgreSQL+pgvector and Redis on the host and checks a cited answer. **Verified 2026-10-15** for the default image (`docs/evidence/2026-10-15/`). Not run: `docker compose up` (uses `pgvector/pgvector:pg16` and `redis:7`) and the `LOCAL_MODELS=1` variant with `docker-compose.local-models.yml` (models mounted read-only at `/models`).
 
 ## Operations
 

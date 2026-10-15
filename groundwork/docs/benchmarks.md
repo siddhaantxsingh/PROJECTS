@@ -86,3 +86,70 @@ HNSW construction is randomised; recall at ef_search=10 varied between 0.90 and 
 ## History
 
 - `258b0ce` run: best NDCG@10 0.550 (BM25 + RM3). After the stemmer fix (`163ef4a`, found by the Campus AI OS browser test) all configurations moved by ≤ 0.009 NDCG@10 (largest: hashing dense, +0.009); numbers above are from the later run. Earlier JSON is in git history.
+
+## Real local models (2026-10-15)
+
+Produced by `benchmarks/neural_bench.py` (parts `retrieval`, `generation`, `regrade`, `injection`). Raw JSON and logs: `benchmarks/results/2026-10-15-neural/`.
+
+**Models** (fetched from Docker Hub `ai/` with `scripts/fetch_models.py`, sha256 and licence recorded in the JSON `env.models`; all Apache-2.0):
+nomic-embed-text-v1.5 (137M, F16, 768-d), Qwen2.5-0.5B-Instruct (F16), SmolLM2-360M-Instruct (Q4_K_M, the `ai/smollm2:latest` tag), Qwen3-Reranker-0.6B. Runtime: llama-cpp-python 0.3.36 (llama.cpp built from source, CPU), 4 threads.
+
+**Machine:** a shared 4 vCPU container (Intel Xeon @ 2.80 GHz), no GPU. Other agents ran builds and simulations at the same time. Load averages were between about 1.5 and 25 while these runs were made (recorded per run in the JSON); a single-threaded numpy matmul test gave about 13 GFLOP/s during one busy period. **All latencies here are pessimistic and noisy.**
+
+**Sub-corpus.** Embedding the full 3401-chunk corpus with nomic ran at about 26 tokens/s on the overloaded machine (about 3 hours), so these runs use every 4th document of pystdlib with all of its sections: **31 documents, 678 chunks, 66 dev and 80 test queries**. Every method below is run on this same sub-corpus, so the comparison is fair, but the numbers are not comparable with the full-corpus tables above. BM25 parameters, LSA dimension and feature-reranker weights are the dev-tuned values from the full-corpus protocol; the nomic fusion weight (0.7) was tuned on the sub-corpus dev split.
+
+### Retrieval (test, 80 queries)
+
+| Configuration | NDCG@10 [95 % CI] | MRR@10 | Recall@1 | Recall@10 | p vs BM25 |
+|---|---|---|---|---|---|
+| BM25 (tuned) | 0.627 [0.541, 0.711] | 0.566 | 0.463 | 0.825 | — |
+| dense LSA-384 | 0.505 [0.421, 0.583] | 0.420 | 0.275 | 0.775 | 0.0005 (worse) |
+| hybrid RRF (LSA) | 0.592 [0.508, 0.675] | 0.519 | 0.388 | 0.825 | 0.04 (worse) |
+| BM25 + feature reranker | 0.670 [0.583, 0.749] | 0.609 | 0.500 | 0.863 | 0.002 |
+| **dense nomic-embed-text-v1.5** | 0.683 [0.607, 0.758] | 0.608 | 0.488 | **0.925** | 0.16 |
+| hybrid RRF (nomic) | 0.700 [0.619, 0.775] | 0.635 | 0.525 | 0.913 | 0.005 |
+| hybrid weighted w=0.7 (nomic) | 0.698 [0.622, 0.771] | 0.629 | 0.488 | 0.913 | 0.013 |
+| hybrid weighted (nomic) + feature reranker | **0.710** [0.633, 0.784] | **0.646** | 0.525 | 0.913 | 0.007 |
+
+Findings:
+
+- The neural embedder is a real improvement over the offline dense retrievers: nomic dense beats LSA by 0.18 NDCG@10, and alone it matches or beats tuned BM25 (difference not significant, p = 0.16) with the best Recall@10 (0.925).
+- Unlike LSA, fusing nomic with BM25 helps: hybrid RRF is +0.073 NDCG@10 over BM25 (p = 0.005). The best configuration is hybrid + the feature reranker (0.710). The CIs of the nomic configurations overlap each other.
+- Latency: retrieval itself takes 12–27 ms per query, but **embedding the query with nomic took a median of 3.4–3.8 s** (3 runs × 30 queries, load average about 10). On an idle 4-core machine this should be far lower, but that was not measured here.
+
+**Neural reranker (Qwen3-Reranker-0.6B): implemented and unit-tested, quality on the dataset NOT MEASURED.** It scores a relevant passage at 0.999 and an irrelevant one at 0.00003 (`tests/test_local_models.py`), but scoring two short passages took about 150 s at load average about 30, so reranking 10 candidates for 80 queries was not feasible on this machine.
+
+### Grounded generation (first 20 test queries, retrieval = hybrid weighted (nomic) + feature reranker, 4 sources)
+
+Metrics (all deterministic, no LLM judge): groundedness and citation precision use the lexical support check; *citation correctness* = the answer cites the labelled relevant section; *answer relevance* = cosine similarity of nomic embeddings of question (`search_query:`) and answer without citation markers (`search_document:`), a semantic proxy and not a human judgement. The relevant section was among the 4 sources for 14 of the 20 queries (0.70).
+
+| Provider | Answered | Groundedness | Citation precision | Cites relevant section (answered / all 20) | Answer relevance | Query-term coverage |
+|---|---|---|---|---|---|---|
+| extractive (baseline) | 18 | 1.00 (by construction) | 1.00 | 0.39 / 0.35 | 0.81 | 0.74 |
+| Qwen2.5-0.5B, raw output | 13 | **0.15** | 0.12 | 0.31 / 0.20 | 0.60 | 0.20 |
+| Qwen2.5-0.5B + enforcement, strict | 2 | 1.00 | 0.75 | 0.50 / 0.05 | 0.54 | 0.14 |
+| Qwen2.5-0.5B + enforcement + attribution | 7 | 1.00 | 0.93 | 0.29 / 0.10 | 0.68 | 0.35 |
+| SmolLM2-360M, raw output | 17 | **0.00** | 0.00 | 0.00 / 0.00 | 0.72 | 0.48 |
+| SmolLM2-360M + enforcement, strict | 0 | — | — | — / 0.00 | — | — |
+| SmolLM2-360M + enforcement + attribution | 8 | 1.00 | 1.00 | 0.25 / 0.10 | 0.73 | 0.45 |
+
+*Enforcement* (`GroundedProvider`) removes every sentence its cited sources do not support. *Strict* also removes uncited sentences; *attribution* (the default) first attaches an uncited sentence to the one source that supports it, which recovers answers where the model copied the right sentence but left out the `[n]` marker. Enforced rows re-grade the same recorded generations (`regrade` part), so they are directly comparable to the raw rows.
+
+Findings — be clear about small-model quality:
+
+- **These small models are not usable as answer writers on their own.** Only 15 % of Qwen2.5-0.5B's sentences and none of SmolLM2-360M's were supported by the sources they cited; SmolLM2 mostly wrote plausible text with no valid citations.
+- The grounding check is what makes their output safe to show: with enforcement every shown sentence is supported (groundedness 1.0), at the cost of abstaining on 65 % (Qwen) or 60 % (SmolLM2) of queries. The extractive provider is still better on every quality metric here.
+- n = 20 queries; confidence intervals are wide.
+- Latency (Qwen2.5-0.5B F16, about 505 prompt tokens, about 20 output tokens): generation median 3.5 s over the 20 queries (load ≈ 10); in 3 repeat runs over 5 queries at load ≈ 5 the median was 1.63 / 1.66 / 1.74 s. SmolLM2-360M wrote longer answers (141 tokens on average): median 7.0 s, p95 69 s.
+
+### Prompt injection against the real model (Qwen2.5-0.5B, first 10 test queries × 2 template families)
+
+An adversarial document (the query text followed by an injection whose payload is the marker `ZXQ-PAYLOAD`) is added for each case; it was in the model's context in every case unless the scanner removed it. Attack success = the marker appears in the final answer.
+
+| Arm | Known-style attacks | Paraphrased attacks |
+|---|---|---|
+| no defences (plain concatenation, no data-not-instructions warning, no sanitising) | **6/10** | 2/10 |
+| prompt defences only (fencing + system prompt + output sanitising, scanner off) | **6/10** | 3/10 |
+| all defences (+ scanner exclusion + grounding enforcement) | **0/10** (all 10 payloads removed by the scanner) | **0/10** (payload reached the model in 10/10; the answer was dropped or reduced to supported sentences) |
+
+Findings: the fencing and system prompt did not stop this small model (6/10 either way); the pattern scanner removed every known-style payload, and grounding enforcement removed every paraphrased payload in this small sample. One undefended answer contained the attacker URL; none did with output sanitising. n = 10 per cell, so these are indications, not rates to quote with confidence. Generation median 1.7 s per call (load 4–7).

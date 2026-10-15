@@ -8,6 +8,7 @@ A multi-tenant course knowledge platform. Instructors upload lecture notes, slid
 
 - **Working vertical slice, verified end to end.** The browser test covers upload → question → cited answer, abstention, flashcards, quiz and analytics.
 - **Tests:** 39 backend tests run against real PostgreSQL + pgvector, and an independent security audit found 10 defects, all fixed.
+- **New (2026-10-15):** optional answers written by a local LLM (Qwen2.5-0.5B-Instruct through llama.cpp, CPU), with every sentence checked against its cited source. Verified in a browser test. The Docker image is built and smoke-tested.
 - **Not yet:** deployed, or tried with real students (see the [beta plan](docs/beta-plan.md)).
 
 ## Features
@@ -18,7 +19,7 @@ A multi-tenant course knowledge platform. Instructors upload lecture notes, slid
 | Roles (RBAC) | Platform: admin, faculty, student. Course: instructor, student. Students join a course with a join code. Instructors can be added and removed, but never the last one. |
 | Course workspaces | Each course is an isolated retrieval tenant. Members only; any other id returns 404. |
 | Documents | PDF (page-aware), Markdown, HTML, text. Upload is idempotent. Deleting a document also deletes its flashcards and any quizzes that quote it. |
-| Ask | Grounded extractive answers with sentence-level citations and a grounding score. Abstains when the material doesn't cover the question. Chunks that look like prompt injection are left out. |
+| Ask | Grounded extractive answers with sentence-level citations and a grounding score (default), or answers written by a local LLM with the same citation checks (`CAMPUS_LLM_PROVIDER=llamacpp`). Abstains when the material doesn't cover the question. Chunks that look like prompt injection are left out. |
 | Research mode | RM3-expanded retrieval with reranking; evidence sentences grouped by document, with pages |
 | Study mode | Flashcards built from definitional sentences. Cloze-style multiple-choice quizzes: answers are hidden until the student submits, and the results show each answer's source page. |
 | Compare | Key terms shared by two documents and distinctive to each, plus matching sections with similarity scores |
@@ -38,7 +39,7 @@ The retrieval and grounding engine is [Groundwork](../groundwork), developed alo
 
 ## Engineering trade-offs
 
-- **Extraction, not generation.** Answers and study items are sentences from the course material, so nothing is invented. The cost: answers are not synthesised across sources, and flashcards only appear where the text defines its terms ([ADR 0002](docs/decisions/0002-extractive-study-tools.md)).
+- **Extraction by default, generation opt-in.** Answers and study items are sentences from the course material, so nothing is invented. A local LLM can write answers instead; its sentences are kept only if their cited source supports them. A 0.5B model is weak, so it often abstains ([ADR 0002](docs/decisions/0002-extractive-study-tools.md)).
 - **Course = tenant.** Isolation is enforced twice: membership checks in the service and tenant scoping in the engine ([ADR 0001](docs/decisions/0001-course-as-tenant.md)).
 - **Privacy over insight.** Instructors see only aggregates where at least 5 eligible students contributed ([ADR 0003](docs/decisions/0003-k-anonymous-analytics.md)).
 - **Single process.** Simple and correct, but not horizontally scalable as is.
@@ -65,18 +66,27 @@ To run it yourself, see [docs/deployment.md](docs/deployment.md).
 [docs/limitations.md](docs/limitations.md):
 
 - No real users yet.
-- No LLM, so answers are extractive.
+- LLM answers come from a very small local model (opt-in) and are slow on CPU.
 - Study tools depend on definitional sentences in the material.
 - Single process.
 - No SSO or MFA.
-- Docker and CI were not run (Docker Hub and GitHub were unreachable from the build environment).
+- Not deployed; the Docker image is built and smoke-tested only.
 
 ## Roadmap
 
 1. Run a beta with 1–2 courses and measure real usage ([plan](docs/beta-plan.md)).
-2. An optional LLM provider for synthesised answers, keeping citation and grounding checks.
+2. Try a larger LLM (local 3B or hosted) for synthesised answers, keeping the citation checks.
 3. OIDC sign-in with the university's identity provider; email verification.
 4. Advisory locks and a shared index, for multiple replicas.
 5. Spaced-repetition scheduling for flashcards.
+
+## Scorecard (2026-10-15, self-assessed)
+
+| Dimension | Score | Why not higher |
+|---|---|---|
+| Fresher-portfolio strength | 7/10 | Full-stack with real security tests, but no real users. |
+| Engineering maturity | 7/10 | CI with browser E2E and an audit; single process. |
+| Deployment readiness | 5/10 | Image built and smoke-tested; never deployed, no backups exercised. |
+| Completion of intended scope | 7/10 | LLM answers work but the 0.5B model is weak and slow; beta not run. |
 
 License: not yet chosen by the owner.
