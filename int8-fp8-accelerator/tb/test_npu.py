@@ -11,7 +11,11 @@ from cocotb.triggers import ReadOnly, RisingEdge
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "model"))
 import npu_ref as ref  # noqa: E402
 
-MAX_M, MAX_N, MAX_K = 64, 64, 256
+# Scratchpad sizes of the DUT (defaults = npu_top defaults; the gate-level
+# runs use the smaller physical-design configuration, see tb/test_small.py).
+MAX_M = int(os.environ.get("NPU_MAX_M", 64))
+MAX_N = int(os.environ.get("NPU_MAX_N", 64))
+MAX_K = int(os.environ.get("NPU_MAX_K", 256))
 A_BASE, B_BASE, C_BASE, BIAS_BASE = 0x10000, 0x20000, 0x40000, 0x60000
 MODES = {"int8": 0, "e4m3": 1, "e5m2": 2}
 
@@ -19,7 +23,7 @@ MODES = {"int8": 0, "e4m3": 1, "e5m2": 2}
 class Npu:
     def __init__(self, dut):
         self.dut = dut
-        self.n = int(dut.N.value) if hasattr(dut, "N") else 8
+        self.n = int(dut.N.value) if hasattr(dut, "N") else int(os.environ.get("NPU_N", 8))
 
     async def reset(self):
         d = self.dut

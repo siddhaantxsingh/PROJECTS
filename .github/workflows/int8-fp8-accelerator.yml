@@ -19,4 +19,6 @@ jobs:
       - run: make model-test
       - run: make test
       - run: make test-n4
+      - run: make test-small
       - run: make synth
+      - run: make synth-top
