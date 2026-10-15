@@ -25,4 +25,4 @@
 | Predictive-maintenance evaluation vs EWMA | VERIFIED (simulated) | `docs/predictive-maintenance.md`, `bench/results/2026-10-14/pdm.json` |
 | Drift detection (PSI, Page-Hinkley) with alerts | VERIFIED (simulated drift) | `internal/drift` tests, gateway drift test |
 | Real machine data | NOT IMPLEMENTED | only synthetic data; see `docs/OWNER_ACTIONS.md` |
-| CI for the new jobs (tinyml, docker) | see README | |
+| CI (test + tinyml + docker jobs) | VERIFIED | GitHub Actions run 38705880336 green on commit 8d1b77a: Go tests with race detector, e2e x2, host C + QEMU Cortex-M4/M3 bit-exactness, Docker smoke test. The previous run (38705318312) failed in the docker job on a password-file permission; fixed. |
