@@ -1,0 +1,5 @@
+old run 1:  17:53:23 up 1 min,  0 user,  load average: 3.76, 1.11, 0.39
+new run 1:  17:56:43 up 5 min,  0 user,  load average: 86.33, 23.52, 8.19
+old run 2:  17:58:17 up 6 min,  0 user,  load average: 111.90, 56.52, 21.77
+new run 2:  17:59:44 up 8 min,  0 user,  load average: 39.64, 46.68, 21.48
+end:  18:01:25 up 9 min,  0 user,  load average: 21.29, 38.05, 20.94

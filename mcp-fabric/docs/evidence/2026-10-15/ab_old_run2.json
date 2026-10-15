@@ -1,0 +1,33 @@
+{
+  "sequential_latency" : [ {
+    "mode" : "upstream direct (stdio)",
+    "calls" : 3000,
+    "p50_us" : 242.773,
+    "p99_us" : 4574.7,
+    "mean_us" : 467.67451166666666
+  }, {
+    "mode" : "through mcp-fabric (HTTP)",
+    "calls" : 3000,
+    "p50_us" : 4323.132,
+    "p99_us" : 46614.958,
+    "mean_us" : 7352.406182666667
+  } ],
+  "throughput" : [ {
+    "clients" : 1,
+    "calls_per_s" : 238.8,
+    "p50_us" : 3006.296,
+    "p99_us" : 20854.595
+  }, {
+    "clients" : 8,
+    "calls_per_s" : 393.2,
+    "p50_us" : 15646.615,
+    "p99_us" : 74034.839
+  }, {
+    "clients" : 32,
+    "calls_per_s" : 426.4,
+    "p50_us" : 61216.912,
+    "p99_us" : 462482.044
+  } ],
+  "cpus" : 4,
+  "audit_dir" : "disk (temp dir)"
+}
