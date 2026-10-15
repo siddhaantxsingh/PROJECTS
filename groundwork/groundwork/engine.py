@@ -18,6 +18,10 @@ Embedding lifecycle per tenant (the `embedders` row is authoritative):
     as the ingest that triggered it, so stored vectors always belong to the
     saved model; on restart the saved model is loaded whatever the current
     chunk count is (deletions never switch the space back)
+  * with a fixed pretrained embedder configured (`EngineConfig.embedder`,
+    e.g. nomic-embed-text through llama.cpp) there is no fitting; if the
+    stored vectors belong to another space they are all re-embedded in one
+    transaction when the tenant is loaded, and the row records the model
 Vectors are zero-padded to the configured dimension so the pgvector column
 type never changes.
 """
@@ -49,7 +53,14 @@ class PaddedEmbedder:
         self.name = inner.name
 
     def embed(self, texts):
-        v = self.inner.embed(texts)
+        return self._pad(self.inner.embed(texts))
+
+    def embed_query(self, texts):
+        from .embed import embed_queries
+
+        return self._pad(embed_queries(self.inner, texts))
+
+    def _pad(self, v):
         if v.shape[1] == self.dim:
             return v
         out = np.zeros((v.shape[0], self.dim), dtype=np.float32)
@@ -72,6 +83,9 @@ class EngineConfig:
     retrieval: RetrievalConfig = field(default_factory=lambda: RetrievalConfig(mode="bm25", rerank=True))
     injection_policy: InjectionPolicy = InjectionPolicy.EXCLUDE
     grounding_threshold: float = 0.7
+    # Optional fixed (pretrained) embedder shared by all tenants, e.g.
+    # local_models.NomicEmbedder. None = hashing -> per-tenant LSA lifecycle.
+    embedder: object | None = None
 
 
 class Engine:
@@ -90,12 +104,30 @@ class Engine:
                 return self.tenants[tenant]
             recs, vecs = self.store.load_chunks(tenant)
             saved = self.store.load_embedder(tenant)
-            if saved:
+            fixed = self.cfg.embedder
+            if fixed is not None:
+                emb = PaddedEmbedder(fixed, self.cfg.dim)
+                fitted = 0
+                if saved is None or saved[0] != emb.name:
+                    # Stored vectors belong to another space (LSA / hashing /
+                    # another model): re-embed every chunk in one transaction.
+                    vecs = emb.embed([embed_text(r) for r in recs]) if recs else None
+                    with self.store.conn.transaction():
+                        if recs:
+                            self.store.update_embeddings([r.id for r in recs], vecs)
+                        self.store.save_embedder(tenant, emb.name, b"")
+            elif saved and saved[0].startswith("lsa"):
                 emb = PaddedEmbedder(deserialize_lsa(saved[1]), self.cfg.dim)
                 fitted = max(len(recs), 1)
             else:
                 emb = PaddedEmbedder(HashingEmbedder(self.cfg.dim), self.cfg.dim)
                 fitted = 0
+                if saved:  # vectors from a fixed model that is no longer configured
+                    vecs = emb.embed([embed_text(r) for r in recs]) if recs else None
+                    with self.store.conn.transaction():
+                        if recs:
+                            self.store.update_embeddings([r.id for r in recs], vecs)
+                        self.store.conn.execute("DELETE FROM embedders WHERE tenant = %s", (tenant,))
             corpus = Corpus(emb)
             if recs:
                 if vecs is None:  # rows written without vectors (should not happen): re-embed
@@ -109,6 +141,8 @@ class Engine:
         """Decide whether the corpus (existing + new `recs`) needs an LSA
         (re)fit. Returns (embedder, all_records, vectors) or None. Pure: no
         database or index side effects."""
+        if self.cfg.embedder is not None:
+            return None  # a pretrained embedder is never refitted
         allrecs = list(ti.corpus.chunks.values()) + recs
         n = len(allrecs)
         if n < self.cfg.lsa_min_chunks or (ti.fitted_size and n < 2 * ti.fitted_size):

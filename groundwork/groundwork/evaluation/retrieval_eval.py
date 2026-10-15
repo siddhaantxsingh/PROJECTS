@@ -5,11 +5,14 @@ every chunking strategy is scored on the same units.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import statistics
 import time
 from dataclasses import dataclass
 from pathlib import Path
+
+import numpy as np
 
 from ..chunking import ChunkSpec, chunk_blocks
 from ..embed import HashingEmbedder, LSAEmbedder
@@ -43,7 +46,12 @@ def unit_id(doc: str, section: str) -> str:
     return f"{doc}#{section}"
 
 
-def build_corpus(ds: Dataset, spec: ChunkSpec, embedder: str = "lsa", dim: int = 256) -> tuple[Corpus, dict]:
+def build_corpus(ds: Dataset, spec: ChunkSpec, embedder="lsa", dim: int = 256,
+                 vector_cache: str | Path | None = None) -> tuple[Corpus, dict]:
+    """`embedder`: None, "lsa", "hashing", or an embedder object (e.g. a
+    local_models.NomicEmbedder). For an object, chunk vectors can be cached
+    in `vector_cache` (an .npz keyed by model name and chunk-text hash) so
+    repeated benchmark runs do not re-embed the corpus."""
     t0 = time.perf_counter()
     records: list[ChunkRecord] = []
     for path in sorted((ds.root / "docs").iterdir()):
@@ -59,9 +67,25 @@ def build_corpus(ds: Dataset, spec: ChunkSpec, embedder: str = "lsa", dim: int =
         emb = LSAEmbedder(dim=dim).fit([embed_text(r) for r in records])
     elif embedder == "hashing":
         emb = HashingEmbedder(dim)
+    elif embedder is not None:
+        emb = embedder
     t2 = time.perf_counter()
     corpus = Corpus(emb)
-    corpus.add(records)
+    vecs = None
+    if emb is not None and not isinstance(embedder, str):
+        from ..retrieve import embed_text
+
+        texts = [embed_text(r) for r in records]
+        key = hashlib.sha256(json.dumps([emb.name, texts]).encode()).hexdigest()[:16]
+        path = Path(vector_cache) / f"{emb.name}-{key}.npy" if vector_cache else None
+        if path is not None and path.exists():
+            vecs = np.load(path)
+        else:
+            vecs = emb.embed(texts)
+            if path is not None:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                np.save(path, vecs)
+    corpus.add(records, vecs)
     t3 = time.perf_counter()
     stats = {"chunks": len(records), "parse_chunk_s": t1 - t0, "embedder_fit_s": t2 - t1, "index_s": t3 - t2,
              "embedder": emb.name if emb else None, "chunking": spec.__dict__}

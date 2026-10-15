@@ -1,6 +1,7 @@
 """Command line: `python -m groundwork <command>`
 
-  serve [--host H] [--port P]          run the HTTP API (env: GW_DATABASE_URL, GW_API_KEYS, GW_REDIS_URL)
+  serve [--host H] [--port P]          run the HTTP API (env: GW_DATABASE_URL, GW_API_KEYS, GW_REDIS_URL;
+                                       optional local models: see groundwork/config.py)
   migrate                              create / check the schema
   ingest TENANT PATH...                ingest files or directories into a tenant
   query TENANT "question"              ask a question (prints JSON)
@@ -19,9 +20,11 @@ def _engine():
     from .store import Store, connect, migrate
 
     conn = connect(os.environ["GW_DATABASE_URL"])
-    cfg = EngineConfig(dim=int(os.environ.get("GW_DIM", "256")))
+    from .config import apply_to_engine_config, provider_from_env
+
+    cfg = apply_to_engine_config(EngineConfig(dim=int(os.environ.get("GW_DIM", "256"))))
     migrate(conn, cfg.dim)
-    return Engine(Store(conn), cfg)
+    return Engine(Store(conn), cfg, provider=provider_from_env())
 
 
 def main(argv: list[str]) -> int:

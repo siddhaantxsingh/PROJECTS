@@ -10,12 +10,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "hypothesis>=6", "fpdf2>=2.7"]
+# Opt-in local models (nomic-embed-text, Qwen3 reranker, Qwen2.5 / SmolLM2) via llama.cpp, CPU.
+local = ["llama-cpp-python>=0.3.16"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # tests import each other as `tests.*`; do not depend on how pytest is invoked
 pythonpath = ["."]
 addopts = "-q"
+markers = ["localmodel: needs llama-cpp-python and GGUF files; runs only with GW_RUN_LOCAL_MODELS=1"]
 
 [build-system]
 requires = ["setuptools>=68"]

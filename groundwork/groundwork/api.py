@@ -83,13 +83,15 @@ def create_app(engine: Engine | None = None, api_keys: dict[bytes, str] | None =
                limiter: RateLimiter | None = None, redis_client=None, metrics_token_env: str | None = None) -> FastAPI:
     if engine is None:
         conn = connect(os.environ["GW_DATABASE_URL"])
-        cfg = EngineConfig(dim=int(os.environ.get("GW_DIM", "256")))
+        from .config import apply_to_engine_config, provider_from_env
+
+        cfg = apply_to_engine_config(EngineConfig(dim=int(os.environ.get("GW_DIM", "256"))))
         migrate(conn, cfg.dim)
         if redis_client is None and os.environ.get("GW_REDIS_URL"):
             import redis
 
             redis_client = redis.Redis.from_url(os.environ["GW_REDIS_URL"], socket_timeout=0.5, socket_connect_timeout=0.5)
-        engine = Engine(Store(conn), cfg, cache=RedisCache(redis_client) if redis_client else None)
+        engine = Engine(Store(conn), cfg, provider=provider_from_env(), cache=RedisCache(redis_client) if redis_client else None)
     keys = api_keys if api_keys is not None else parse_keys(os.environ.get("GW_API_KEYS", ""))
     limiter = limiter or RateLimiter(int(os.environ.get("GW_RATE_PER_MIN", "120")), redis_client)
     metrics = Metrics()

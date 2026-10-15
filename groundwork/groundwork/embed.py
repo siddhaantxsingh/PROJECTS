@@ -1,7 +1,7 @@
 """Embedding providers.
 
-No pretrained neural embedding model is reachable from the build sandbox
-(huggingface.co is blocked), so the shipped dense retrievers are:
+The built-in, dependency-free dense retrievers (used by default and in CI)
+are:
 
 * `HashingEmbedder` — signed feature hashing of unigrams + bigrams with
   sublinear TF. Needs no training; a weak but honest dense baseline.
@@ -12,7 +12,10 @@ No pretrained neural embedding model is reachable from the build sandbox
 
 Every provider returns L2-normalised float32 rows, so cosine similarity is a
 dot product and pgvector's `<=>` (cosine distance) ranks identically to
-numpy. A real model plugs in by implementing the same `Embedder` protocol.
+numpy. A real model plugs in by implementing the same `Embedder` protocol;
+`local_models.NomicEmbedder` (nomic-embed-text-v1.5 through llama.cpp) is
+the opt-in neural implementation, and it adds `embed_query` for its query
+prefix (see `embed_queries`).
 """
 from __future__ import annotations
 
@@ -33,6 +36,14 @@ class Embedder(Protocol):
     dim: int
 
     def embed(self, texts: Sequence[str]) -> np.ndarray: ...
+
+
+def embed_queries(embedder, texts: Sequence[str]) -> np.ndarray:
+    """Embed search queries. Asymmetric models (e.g. nomic-embed-text, which
+    expects `search_query:` vs `search_document:` prefixes) expose
+    `embed_query`; symmetric embedders (LSA, hashing) use `embed` for both."""
+    f = getattr(embedder, "embed_query", None)
+    return f(texts) if f is not None else embedder.embed(texts)
 
 
 def _l2(m: np.ndarray) -> np.ndarray:

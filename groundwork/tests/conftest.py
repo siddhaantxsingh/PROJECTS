@@ -32,3 +32,13 @@ def redis_client():
     r.flushdb()
     yield r
     r.flushdb()
+
+
+def pytest_collection_modifyitems(config, items):
+    """`localmodel` tests load real GGUF models; they are opt-in so CI stays light."""
+    if os.environ.get("GW_RUN_LOCAL_MODELS") == "1":
+        return
+    skip = pytest.mark.skip(reason="local model test: set GW_RUN_LOCAL_MODELS=1 (needs groundwork[local] + scripts/fetch_models.py)")
+    for item in items:
+        if "localmodel" in item.keywords:
+            item.add_marker(skip)

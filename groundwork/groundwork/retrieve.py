@@ -19,7 +19,7 @@ from typing import Callable
 import numpy as np
 
 from .bm25 import BM25Index
-from .embed import Embedder
+from .embed import Embedder, embed_queries
 from .text import tokenize
 
 
@@ -122,7 +122,7 @@ class Corpus:
         ids, m = self._matrix()
         if m is None or not ids:
             return []
-        q = qvec if qvec is not None else self.embedder.embed([query])[0]
+        q = qvec if qvec is not None else embed_queries(self.embedder, [query])[0]
         sims = m @ q
         if flt is not None:
             mask = np.fromiter((flt(self.chunks[c]) for c in ids), dtype=bool, count=len(ids))
@@ -262,7 +262,7 @@ def rerank(corpus: Corpus, query: str, hits: list[Hit], k: int, w: RerankWeights
     span = hi - lo or 1.0
     dense_sims: dict[str, float] = {}
     if w.dense and corpus.embedder is not None:
-        q = qvec if qvec is not None else corpus.embedder.embed([query])[0]
+        q = qvec if qvec is not None else embed_queries(corpus.embedder, [query])[0]
         vecs = corpus.vectors_for([h.chunk.id for h in hits])
         dense_sims = {h.chunk.id: float(v @ q) for h, v in zip(hits, vecs)}
     out = []
@@ -285,6 +285,16 @@ def rerank(corpus: Corpus, query: str, hits: list[Hit], k: int, w: RerankWeights
     return out[:k]
 
 
+def model_rerank(model, query: str, hits: list[Hit], depth: int) -> list[Hit]:
+    """Rescore the top `depth` hits with a neural reranker; hits below the
+    depth keep their order after the reranked ones."""
+    head, tail = hits[:depth], hits[depth:]
+    scores = model.score(query, [index_text(h.chunk) for h in head])
+    order = sorted(range(len(head)), key=lambda i: (-scores[i], i))
+    return [Hit(head[i].chunk, scores[i], {**head[i].sources, "first_stage_rank": i + 1, "model_score": scores[i]})
+            for i in order] + tail
+
+
 # ------------------------------------------------------------------ pipeline
 
 
@@ -297,6 +307,11 @@ class RetrievalConfig:
     rerank: bool = False
     candidates: int = 100         # first-stage depth per retriever
     rerank_weights: RerankWeights = field(default_factory=RerankWeights)
+    # Optional neural reranker (e.g. local_models.Qwen3Reranker): any object
+    # with `name` and `score(query, texts) -> list[float]`. It rescores the
+    # top `model_rerank_depth` hits after fusion / feature reranking.
+    model_reranker: object | None = None
+    model_rerank_depth: int = 20
 
     def label(self) -> str:
         parts = [self.mode]
@@ -306,6 +321,8 @@ class RetrievalConfig:
             parts.append(self.rewrite)
         if self.rerank:
             parts.append("rerank")
+        if self.model_reranker is not None:
+            parts.append(f"{getattr(self.model_reranker, 'name', 'model')}@{self.model_rerank_depth}")
         return "+".join(parts)
 
 
@@ -326,7 +343,7 @@ def retrieve(corpus: Corpus, query: str, k: int, cfg: RetrievalConfig, flt: Filt
         names.append("bm25")
     t2 = time.perf_counter()
     if cfg.mode in ("dense", "hybrid") and corpus.embedder is not None:
-        qvec = corpus.embedder.embed([query])[0]
+        qvec = embed_queries(corpus.embedder, [query])[0]
         lists.append(corpus.search_dense(query, depth, flt, qvec=qvec))
         names.append("dense")
     t3 = time.perf_counter()
@@ -335,7 +352,10 @@ def retrieve(corpus: Corpus, query: str, k: int, cfg: RetrievalConfig, flt: Filt
     else:
         hits = lists[0] if lists else []
     if cfg.rerank:
-        hits = rerank(corpus, query, hits, k, cfg.rerank_weights, qvec=qvec)
+        hits = rerank(corpus, query, hits, max(k, cfg.model_rerank_depth) if cfg.model_reranker else k,
+                      cfg.rerank_weights, qvec=qvec)
+    if cfg.model_reranker is not None and hits:
+        hits = model_rerank(cfg.model_reranker, query, hits, cfg.model_rerank_depth)
     t4 = time.perf_counter()
     if timings is not None:
         timings.update(rewrite_ms=(t1 - t0) * 1e3, bm25_ms=(t2 - t1) * 1e3, dense_ms=(t3 - t2) * 1e3,

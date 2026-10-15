@@ -7,9 +7,14 @@ Providers
   the context, but its answers are excerpts, not fluent prose. It abstains
   when no context sentence covers enough of the query.
 * `OpenAICompatibleProvider`: any `/v1/chat/completions` endpoint
-  (configured by env vars). NOT exercised against a real model in this
-  repository (no API key is available in the build environment); it is
-  tested against a mock HTTP transport only.
+  (configured by env vars). Tested against a mock HTTP transport only (no
+  hosted API key is available in the build environment).
+* `local_models.LlamaCppProvider` (opt-in): a local instruct model (e.g.
+  Qwen2.5-0.5B-Instruct) run in-process with llama.cpp. Benchmarked in
+  docs/benchmarks.md.
+* `GroundedProvider` wraps any provider and enforces the grounding check:
+  sentences that are uncited or not supported by their cited sources are
+  removed; if nothing supported remains the answer becomes an abstention.
 
 Whatever the provider, `check_grounding` validates the answer afterwards:
 every sentence must carry citations, and each citation must point at a
@@ -268,6 +273,39 @@ def check_grounding(answer: Answer, threshold: float = 0.7) -> GroundingReport:
     n = len(sents)
     return GroundingReport(n, supported, uncited, invalid, total, supported / n if n else 1.0,
                            (total - invalid) / total if total else 0.0, bad)
+
+
+class GroundedProvider:
+    """Enforce grounding on another provider's output. The raw answer's
+    grounding numbers are kept in `usage["raw_grounding"]` so evaluation can
+    report the model's own behaviour and the enforced behaviour separately."""
+
+    def __init__(self, inner: Provider, threshold: float = 0.7) -> None:
+        self.inner, self.threshold = inner, threshold
+        self.name = f"{inner.name}+enforced"
+
+    def generate(self, query: str, sources: list[Source]) -> Answer:
+        raw = self.inner.generate(query, sources)
+        g = check_grounding(raw, self.threshold)
+        usage = {**raw.usage, "raw_grounding": {"sentences": g.sentences, "supported": g.supported, "uncited": g.uncited,
+                                                "groundedness": g.groundedness, "citation_precision": g.citation_precision},
+                 "raw_answer": raw.text}
+        if raw.abstained:
+            return Answer(ABSTAIN, sources, {}, True, self.name, usage)
+        sents, cites = parse_citations(raw.text, max_source=len(sources)) if raw.segments is None else (
+            [t for t, _ in raw.segments], {i: ns for i, (_, ns) in enumerate(raw.segments) if ns})
+        valid = {s.n for s in sources}
+        by_n = {s.n: s for s in sources}
+        segments = []
+        for i, sent in enumerate(sents):
+            ns = [n for n in cites.get(i, []) if n in valid]
+            if ns and support_score(sent, " ".join(by_n[n].text for n in ns)) >= self.threshold:
+                segments.append((sent, ns))
+        usage["dropped_sentences"] = len(sents) - len(segments)
+        if not segments:
+            return Answer(ABSTAIN, sources, {}, True, self.name, usage)
+        text = " ".join(t for t, _ in segments)
+        return Answer(text, sources, {i: ns for i, (_, ns) in enumerate(segments)}, False, self.name, usage, segments=segments)
 
 
 def answer_json(a: Answer, g: GroundingReport | None = None) -> dict:
