@@ -14,7 +14,23 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y verilator
       - run: verilator --version
       - run: python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -r tb/requirements.txt
-      - name: lint (verilator -Wall)
-        run: verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL rtl/periph_soc.sv rtl/apb_uart.sv rtl/apb_timer.sv rtl/apb_gpio.sv
-      - name: regression (3 seeds) and bug injection
-        run: PATH=/tmp/venv/bin:$PATH python3 tools/regress.py --seeds 3 --bugs --bug-seeds 3 --out /tmp/regress
+      - name: generated register files are up to date
+        run: python3 tools/reggen.py --check
+      - name: C header compiles
+        run: gcc -fsyntax-only -x c sw/periph_soc_regs.h
+      - name: lint (verilator -Wall, RTL + SVA)
+        run: verilator --lint-only -Wall --assert -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-SYNCASYNCNET --top-module periph_soc rtl/periph_soc.sv rtl/apb_uart.sv rtl/apb_timer.sv rtl/apb_gpio.sv sva/soc_sva.sv sva/sva_bind.sv
+      - name: regression (3 seeds), bug injection, SVA and RAL failing-first checks
+        run: PATH=/tmp/venv/bin:$PATH python3 tools/regress.py --seeds 3 --bugs --bug-seeds 3 --sva-bugs --ral-bugs --out /tmp/regress
+  sv-uvm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: fetch Accellera UVM 2020.3.1
+        run: git clone --depth 1 --branch 2020.3.1 https://github.com/accellera-official/uvm-core /tmp/uvm-core && git -C /tmp/uvm-core rev-parse HEAD
+      - name: SV-UVM tests on Verilator 5.052 (official Docker image)
+        run: >
+          docker run --rm -v "$PWD:$PWD" -v /tmp/uvm-core:/tmp/uvm-core -w "$PWD/uvm-soc-verification"
+          -e UVM_HOME=/tmp/uvm-core/src --entrypoint sh verilator/verilator:v5.052
+          sv_uvm/run_verilator.sh /tmp/svuvm-out
