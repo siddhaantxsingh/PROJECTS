@@ -29,7 +29,7 @@ printf '%s\n' "$PW" > mqtt.password
 if command -v mosquitto_passwd >/dev/null; then
   rm -f passwd; mosquitto_passwd -b -c passwd "$USER_NAME" "$PW"
 else
-  docker run --rm -v "$OUT":/out eclipse-mosquitto:2.0.18 sh -c "mosquitto_passwd -b -c /out/passwd '$USER_NAME' '$PW'"
+  rm -f passwd; docker run --rm --user "$(id -u):$(id -g)" -v "$OUT":/out eclipse-mosquitto:2.0.18 sh -c "mosquitto_passwd -b -c /out/passwd '$USER_NAME' '$PW'"
 fi
 # readable by the containers' non-root users (demo only)
 chmod 644 ./*.pem ./*.key passwd mqtt.password
