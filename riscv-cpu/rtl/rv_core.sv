@@ -17,6 +17,14 @@
 // Memory interface: one combinational read port for instructions and one
 // combinational read / synchronous write port for data, over the same
 // address space (stores are visible to later fetches after FENCE.I).
+// Each port has a ready input so that a cache can insert wait states:
+//   imem_ready = 0: imem_rdata is not valid this cycle; IF inserts a bubble
+//                   and retries the same pc (or the redirect target).
+//   dmem_ready = 0: the access in MEM has not completed; the whole pipeline
+//                   up to MEM holds and WB gets a bubble. A store is taken
+//                   exactly once, on the cycle where dmem_we && dmem_ready.
+// fencei pulses when FENCE.I commits, so a cache can invalidate itself and
+// drain buffered stores before the redirected fetch.
 //
 // Trace: one record per instruction that leaves WB, in program order,
 // including instructions that trapped (rvfi_trap) and the instruction that
@@ -33,6 +41,7 @@ module rv_core #(
 
     output logic [31:0] imem_addr,
     input  wire  [31:0] imem_rdata,
+    input  wire         imem_ready,
 
     output logic        dmem_re,
     output logic        dmem_we,
@@ -40,6 +49,8 @@ module rv_core #(
     output logic [3:0]  dmem_wstrb,
     output logic [31:0] dmem_wdata,  // already shifted into byte lanes
     input  wire  [31:0] dmem_rdata,  // the aligned word containing dmem_addr
+    input  wire         dmem_ready,
+    output logic        fencei,
 
     input  wire         irq_software,
     input  wire         irq_timer,
@@ -67,7 +78,10 @@ module rv_core #(
     output logic [31:0] perf_branches,
     output logic [31:0] perf_mispredicts,
     output logic [31:0] perf_load_use_stalls,
-    output logic [31:0] perf_div_stalls
+    output logic [31:0] perf_div_stalls,
+    output logic [31:0] perf_imem_stalls,   // cycles IF waited for imem_ready
+    output logic [31:0] perf_dmem_stalls,   // cycles MEM waited for dmem_ready
+    output logic [31:0] perf_fetches        // instructions taken from imem by IF
 );
     localparam int BTB_N = 1 << BTB_BITS;
 
@@ -187,7 +201,16 @@ module rv_core #(
         .clk(clk), .rst_n(rst_n), .start(ex_is_div && !div_started && !div_busy), .kill(ex_redirect && !ex_is_div),
         .op(e_md_op[1:0]), .a(ex_rs1v), .b(ex_rs2v), .busy(div_busy), .done(div_done), .y(div_y)
     );
-    wire ex_stall = ex_is_div && !(div_started && div_done);
+    // The divider's done is a one-cycle pulse. If MEM is stalled in that
+    // cycle, the result is kept in div_res_q until EX can move on.
+    logic        div_have;
+    logic [31:0] div_res_q;
+    wire div_ready_now = div_have || (div_started && div_done);
+    wire [31:0] div_val = div_have ? div_res_q : div_y;
+    wire div_stall = ex_is_div && !div_ready_now;
+    // MEM stall: a load or store in MEM that the data port has not accepted
+    wire mem_stall = m_valid && !m_trap && (m_is_load || m_is_store) && !dmem_ready;
+    wire ex_stall = div_stall || mem_stall;
 
     // control flow
     wire [31:0] pc_plus4 = e_pc + 32'd4;
@@ -279,8 +302,9 @@ module rv_core #(
     wire [31:0] trap_vector = (mtvec_r[0] && take_irq) ? {mtvec_r[31:2], 2'b00} + {trap_cause[29:0], 2'b00}
                                                       : {mtvec_r[31:2], 2'b00};
 
-    wire ex_mret = e_valid && !ex_trap && e_is_mret;
-    wire ex_fencei = e_valid && !ex_trap && e_is_fencei;
+    wire ex_mret = e_valid && !ex_stall && !ex_trap && e_is_mret;
+    wire ex_fencei = e_valid && !ex_stall && !ex_trap && e_is_fencei;
+    assign fencei = ex_fencei;
     wire mispredict = e_valid && !ex_trap && !ex_stall && (actual_next != e_pred_next);
     assign ex_redirect = ex_trap || ex_mret || ex_fencei || mispredict;
     wire [31:0] redirect_pc = ex_trap ? trap_vector : ex_mret ? mepc_r : ex_fencei ? pc_plus4 : actual_next;
@@ -289,7 +313,7 @@ module rv_core #(
     always_comb begin
         if (e_is_jal || e_is_jalr) ex_result = pc_plus4;
         else if (e_is_csr) ex_result = csr_rdata;
-        else if (e_is_muldiv) ex_result = e_md_op[2] ? div_y : mul_y;
+        else if (e_is_muldiv) ex_result = e_md_op[2] ? div_val : mul_y;
         else ex_result = alu_y;
     end
 
@@ -330,7 +354,7 @@ module rv_core #(
         if (!rst_n) begin
             pc <= RESET_PC;
             d_valid <= 1'b0; e_valid <= 1'b0; m_valid <= 1'b0; w_valid <= 1'b0;
-            div_started <= 1'b0;
+            div_started <= 1'b0; div_have <= 1'b0; div_res_q <= '0;
             d_pc <= '0; d_insn <= '0; d_pred_next <= '0;
         end else begin
             // ---- IF -> ID
@@ -338,11 +362,15 @@ module rv_core #(
                 pc <= redirect_pc;
                 d_valid <= 1'b0;
             end else if (!(ex_stall || id_stall)) begin
-                pc <= f_pred_next;
-                d_valid <= 1'b1;
-                d_pc <= pc;
-                d_insn <= imem_rdata;
-                d_pred_next <= f_pred_next;
+                if (imem_ready) begin
+                    pc <= f_pred_next;
+                    d_valid <= 1'b1;
+                    d_pc <= pc;
+                    d_insn <= imem_rdata;
+                    d_pred_next <= f_pred_next;
+                end else begin
+                    d_valid <= 1'b0;  // ID moved on; nothing fetched yet
+                end
             end
 
             // ---- ID -> EX
@@ -359,19 +387,20 @@ module rv_core #(
             // ---- divider handshake
             if (ex_stall) begin
                 if (ex_is_div && !div_started && !div_busy) div_started <= 1'b1;
+                if (ex_is_div && div_started && div_done) begin
+                    div_have <= 1'b1;
+                    div_res_q <= div_y;
+                end
             end else begin
                 div_started <= 1'b0;
+                div_have <= 1'b0;
             end
 
-            // ---- EX -> MEM
-            if (e_valid && !ex_stall) begin
-                m_valid <= 1'b1;
-            end else begin
-                m_valid <= 1'b0;
-            end
+            // ---- EX -> MEM (MEM holds while its access is outstanding)
+            if (!mem_stall) m_valid <= e_valid && !ex_stall;
 
             // ---- MEM -> WB
-            w_valid <= m_valid;
+            w_valid <= m_valid && !mem_stall;
         end
     end
 
@@ -403,7 +432,7 @@ module rv_core #(
             m_no_count <= e_is_csr && csr_writes && (csr_addr == CSR_MINSTRET || csr_addr == CSR_MINSTRETH);
         end
 
-        if (m_valid) begin
+        if (m_valid && !mem_stall) begin
             w_pc <= m_pc; w_insn <= m_insn; w_trap <= m_trap; w_intr <= m_intr; w_cause <= m_cause;
             w_rd <= m_rd; w_rd_we <= m_rd_we; w_result <= m_is_load ? ld_val : m_result;
             w_next_pc <= m_next_pc; w_no_count <= m_no_count;
@@ -437,7 +466,7 @@ module rv_core #(
             end else if (ex_mret) begin
                 mstatus_mie <= mstatus_mpie;
                 mstatus_mpie <= 1'b1;
-            end else if (e_valid && e_is_csr && csr_writes) begin
+            end else if (e_valid && !ex_stall && e_is_csr && csr_writes) begin
                 unique case (csr_addr)
                     CSR_MSTATUS: begin mstatus_mie <= csr_wdata[3]; mstatus_mpie <= csr_wdata[7]; end
                     CSR_MIE:      mie_r <= csr_wdata & 32'h0000_0888;
@@ -510,11 +539,15 @@ module rv_core #(
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             perf_branches <= '0; perf_mispredicts <= '0; perf_load_use_stalls <= '0; perf_div_stalls <= '0;
+            perf_imem_stalls <= '0; perf_dmem_stalls <= '0; perf_fetches <= '0;
         end else begin
             if (bp_update) perf_branches <= perf_branches + 32'd1;
             if (mispredict && (e_is_branch || e_is_jal || e_is_jalr)) perf_mispredicts <= perf_mispredicts + 32'd1;
             if (load_use && !ex_stall && !ex_redirect) perf_load_use_stalls <= perf_load_use_stalls + 32'd1;
-            if (ex_stall) perf_div_stalls <= perf_div_stalls + 32'd1;
+            if (div_stall) perf_div_stalls <= perf_div_stalls + 32'd1;
+            if (!imem_ready && !ex_redirect && !ex_stall && !id_stall) perf_imem_stalls <= perf_imem_stalls + 32'd1;
+            if (!ex_redirect && !ex_stall && !id_stall && imem_ready) perf_fetches <= perf_fetches + 32'd1;
+            if (mem_stall) perf_dmem_stalls <= perf_dmem_stalls + 32'd1;
         end
     end
     assign perf_cycles = mcycle_r;

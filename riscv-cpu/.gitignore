@@ -3,3 +3,5 @@ obj_dir_nobp/
 obj_dir_btb2/
 build/
 third_party/
+obj_dir_c*/
+obj_dir_single/

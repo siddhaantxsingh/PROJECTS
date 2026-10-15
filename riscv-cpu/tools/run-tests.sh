@@ -8,7 +8,7 @@ SIM=$1; shift
 pass=0; fail=0; failed=""
 log=$(mktemp)
 for elf in "$@"; do
-  "$SIM" --quiet "$elf" 2>"$log"; rc=$?
+  "$SIM" --quiet $SIM_ARGS "$elf" 2>"$log"; rc=$?
   if { [ $xfail -eq 0 ] && [ $rc -eq 0 ]; } || { [ $xfail -eq 1 ] && [ $rc -eq 1 ]; }; then
     pass=$((pass+1))
   else

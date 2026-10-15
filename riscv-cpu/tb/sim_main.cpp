@@ -7,7 +7,17 @@
 //     --stats FILE       write performance counters as JSON
 //     --irq SEED         randomly assert the timer/external/software interrupt lines;
 //                        the program acknowledges by storing to IRQ_ACK
+//     --irq-period P     mean cycles between interrupt-line raises (default 64)
 //     --quiet            no console echo
+//   Cached build only (rv_top, compiled with -DCACHED):
+//     --mem-latency L    cycles from a read request to its first data beat (default 20)
+//     --mem-write-cycles W  cycles the memory is busy per posted write (default 2)
+//
+// Cached build: the core sees memory through rv_top's caches; this harness
+// models the memory behind one bus (one transaction at a time; a line read
+// returns one word per cycle after L cycles). MMIO and HTIF are handled where
+// the write reaches memory, i.e. after the write buffer. Data written by the
+// host (HTIF syscall replies) is announced to the D-cache on the snoop port.
 //
 // Memory map: RAM at 0x8000_0000 (16 MiB), console (byte store) at
 // 0x1000_0000, interrupt acknowledge at 0x1000_0008, irq counter (read) at
@@ -24,7 +34,13 @@
 #include <string>
 #include <vector>
 
+#ifdef CACHED
+#include "Vrv_top.h"
+typedef Vrv_top Top;
+#else
 #include "Vrv_core.h"
+typedef Vrv_core Top;
+#endif
 #include "iss.h"
 #include "verilated.h"
 
@@ -98,6 +114,7 @@ struct Htif {
     int code = 0;
     std::string out;
     bool echo = false;
+    std::vector<uint32_t> written;  // addresses the host wrote (for cache snooping)
     // returns true if the store was consumed by the host
     void on_store(Memory& m, uint32_t addr, uint32_t val, bool primary) {
         if (!tohost || addr != tohost || val == 0) return;
@@ -125,6 +142,9 @@ struct Htif {
         m.wr(tohost, 4, 0);
         m.wr(tohost + 4, 4, 0);
         if (fromhost) { m.wr(fromhost, 4, 1); m.wr(fromhost + 4, 4, 0); }
+        written.push_back(val);
+        written.push_back(tohost);
+        if (fromhost) written.push_back(fromhost);
     }
 };
 
@@ -135,6 +155,8 @@ int main(int argc, char** argv) {
     uint64_t max_cycles = 200000000ull;
     bool lockstep = true, quiet = false, irq_mode = false;
     uint32_t irq_seed = 0;
+    uint64_t mem_latency = 20, mem_wcycles = 2;
+    uint32_t irq_period = 64;
     const char* trace_path = nullptr;
     const char* stats_path = nullptr;
     const char* elf_path = nullptr;
@@ -146,6 +168,9 @@ int main(int argc, char** argv) {
         else if (a == "--stats" && i + 1 < argc) stats_path = argv[++i];
         else if (a == "--irq" && i + 1 < argc) { irq_mode = true; irq_seed = uint32_t(strtoul(argv[++i], nullptr, 0)); }
         else if (a == "--quiet") quiet = true;
+        else if (a == "--irq-period" && i + 1 < argc) irq_period = uint32_t(strtoul(argv[++i], nullptr, 0));
+        else if (a == "--mem-latency" && i + 1 < argc) mem_latency = strtoull(argv[++i], nullptr, 0);
+        else if (a == "--mem-write-cycles" && i + 1 < argc) mem_wcycles = strtoull(argv[++i], nullptr, 0);
         else if (a[0] != '+' && a[0] != '-') elf_path = argv[i];
     }
     if (!elf_path) {
@@ -183,7 +208,7 @@ int main(int argc, char** argv) {
     Iss iss(bus, elf.entry);
 
     std::unique_ptr<VerilatedContext> ctx(new VerilatedContext);
-    std::unique_ptr<Vrv_core> top(new Vrv_core(ctx.get()));
+    std::unique_ptr<Top> top(new Top(ctx.get()));
     FILE* trace = trace_path ? fopen(trace_path, "w") : nullptr;
 
     if (elf.entry != 0x80000000u) {
@@ -194,6 +219,27 @@ int main(int argc, char** argv) {
     top->clk = 0;
     top->rst_n = 0;
     top->irq_software = top->irq_timer = top->irq_external = 0;
+#ifdef CACHED
+    if (mem_latency < 1) mem_latency = 1;
+    if (mem_wcycles < 1) mem_wcycles = 1;
+    top->io_base = elf.tohost >> 6;
+    if (elf.fromhost && (elf.fromhost >> 6) != (elf.tohost >> 6) && (elf.fromhost >> 6) != (elf.tohost >> 6) + 1) {
+        fprintf(stderr, "fromhost is outside the 128-byte uncached window after tohost\n");
+        return 4;
+    }
+    top->bus_req_ready = 0;
+    top->bus_resp_valid = 0;
+    top->snoop_inv = 0;
+    // memory model state
+    bool rd_busy = false, rd_line = false, rd_ifetch = false;
+    uint32_t rd_addr = 0;
+    int rd_beat = 0;
+    uint64_t rd_first = 0, mem_free = 0;
+    std::vector<uint32_t> snoop_q;
+#else
+    top->imem_ready = 1;
+    top->dmem_ready = 1;
+#endif
     top->eval();
     top->clk = 1; top->eval();
     top->clk = 0; top->eval();
@@ -204,9 +250,61 @@ int main(int argc, char** argv) {
     uint64_t cycle = 0, retired = 0;
     bool bad_access = false;
     for (; cycle < max_cycles && status < 0; cycle++) {
+#ifdef CACHED
+        // ---- memory model: drive this cycle's inputs
+        bool beat_now = rd_busy && cycle >= rd_first + uint64_t(rd_beat);
+        top->bus_resp_valid = beat_now;
+        if (beat_now) {
+            uint32_t a = rd_line ? rd_addr + 4u * uint32_t(rd_beat) : rd_addr;
+            uint32_t v = 0;
+            if (mem.in_ram(a, 4)) v = mem.rd(a, 4);
+            else if (a == IRQ_COUNT) v = irq_count;
+            else if (!rd_ifetch) bad_access = true;  // wrong-path fetches may go anywhere
+            top->bus_resp_rdata = v;
+        }
+        top->snoop_inv = !snoop_q.empty();
+        if (!snoop_q.empty()) top->snoop_addr = snoop_q.front();
+        top->bus_req_ready = !rd_busy && cycle >= mem_free && snoop_q.empty();
+        top->eval();
+        if (!snoop_q.empty()) snoop_q.erase(snoop_q.begin());
+        if (beat_now) {
+            rd_beat++;
+            if (rd_beat == (rd_line ? int(LINE_WORDS_SIM) : 1)) rd_busy = false;
+        }
+        if (top->bus_req_valid && top->bus_req_ready) {
+            uint32_t a = top->bus_req_addr;
+            if (!top->bus_req_we) {
+                rd_busy = true; rd_line = top->bus_req_line; rd_ifetch = top->bus_req_ifetch;
+                rd_addr = a; rd_beat = 0; rd_first = cycle + mem_latency;
+            } else {
+                uint32_t w = top->bus_req_wdata;
+                uint8_t st = top->bus_req_wstrb;
+                mem_free = cycle + mem_wcycles;
+                if (mem.in_ram(a, 4)) {
+                    for (int i = 0; i < 4; i++)
+                        if (st >> i & 1) mem.ram[a - RAM_BASE + i] = uint8_t(w >> (8 * i));
+                    if (st == 0xF) {
+                        htif.on_store(mem, a, w, true);
+                        for (uint32_t x : htif.written) snoop_q.push_back(x);
+                        htif.written.clear();
+                    }
+                } else if (a == CONSOLE) {
+                    char c = char(w & 0xff);
+                    console += c;
+                    if (!quiet) { putchar(c); fflush(stdout); }
+                } else if (a == IRQ_ACK) {
+                    irq_lines &= ~w;
+                    irq_count++;
+                } else {
+                    bad_access = true;
+                }
+            }
+        }
+#else
         // combinational memory reads for this cycle
         uint32_t ia = top->imem_addr;
         top->imem_rdata = mem.in_ram(ia & ~3u, 4) ? mem.rd(ia & ~3u, 4) : 0u;
+        top->eval();  // the single-cycle baseline's data address depends on imem_rdata
         uint32_t da = top->dmem_addr & ~3u;
         if (top->dmem_re) {
             if (mem.in_ram(da, 4)) top->dmem_rdata = mem.rd(da, 4);
@@ -234,8 +332,9 @@ int main(int argc, char** argv) {
                 bad_access = true;
             }
         }
+#endif
         // interrupt lines change only between clock edges
-        if (irq_mode && (rng() % 64) == 0) irq_lines |= (1u << (rng() % 3 == 0 ? 3 : rng() % 2 ? 7 : 11));
+        if (irq_mode && (rng() % irq_period) == 0) irq_lines |= (1u << (rng() % 3 == 0 ? 3 : rng() % 2 ? 7 : 11));
         top->irq_software = (irq_lines >> 3) & 1;
         top->irq_timer = (irq_lines >> 7) & 1;
         top->irq_external = (irq_lines >> 11) & 1;
@@ -246,7 +345,11 @@ int main(int argc, char** argv) {
         top->eval();
 
         if (bad_access) {
+#ifdef CACHED
+            fprintf(stderr, "access outside the memory map near cycle %llu (bus addr 0x%08x)\n", (unsigned long long)cycle, top->bus_req_addr);
+#else
             fprintf(stderr, "access outside the memory map near cycle %llu (addr 0x%08x)\n", (unsigned long long)cycle, top->dmem_addr);
+#endif
             status = 4;
             break;
         }
@@ -318,6 +421,8 @@ int main(int argc, char** argv) {
         if (htif.done) status = htif.code == 0 ? 0 : 1;
     }
     if (status < 0) status = 3;
+#ifdef CACHED
+#endif
 
     double cpi = top->perf_instret ? double(top->perf_cycles) / double(top->perf_instret) : 0.0;
     if (stats_path) {
@@ -325,10 +430,24 @@ int main(int argc, char** argv) {
         fprintf(s,
                 "{\"status\": %d, \"exit_code\": %d, \"cycles\": %llu, \"instret\": %llu, \"cpi\": %.4f, "
                 "\"branches\": %u, \"mispredicts\": %u, \"load_use_stalls\": %u, \"div_stall_cycles\": %u, "
-                "\"interrupts_acked\": %u, \"lockstep\": %s}\n",
+                "\"interrupts_acked\": %u, \"lockstep\": %s, \"imem_stall_cycles\": %u, \"dmem_stall_cycles\": %u, "
+                "\"fetches\": %u",
                 status, htif.code, (unsigned long long)top->perf_cycles, (unsigned long long)top->perf_instret, cpi,
                 top->perf_branches, top->perf_mispredicts, top->perf_load_use_stalls, top->perf_div_stalls, irq_count,
-                lockstep ? "true" : "false");
+                lockstep ? "true" : "false", top->perf_imem_stalls, top->perf_dmem_stalls, top->perf_fetches);
+#ifdef CACHED
+        fprintf(s,
+                ", \"cached\": true, \"mem_latency\": %llu, \"mem_write_cycles\": %llu, \"line_words\": %d, "
+                "\"i_sets\": %d, \"i_ways\": %d, \"d_sets\": %d, \"d_ways\": %d, \"wb_depth\": %d, "
+                "\"dmem_accesses\": %u, \"i_refills\": %u, \"d_refills\": %u, \"d_uncached\": %u, "
+                "\"wbuf_full_cycles\": %u",
+                (unsigned long long)mem_latency, (unsigned long long)mem_wcycles, int(LINE_WORDS_SIM), int(I_SETS_SIM),
+                int(I_WAYS_SIM), int(D_SETS_SIM), int(D_WAYS_SIM), int(WB_DEPTH_SIM), top->perf_dmem_accesses,
+                top->perf_i_refills, top->perf_d_refills, top->perf_d_uncached, top->perf_wbuf_full);
+#else
+        fprintf(s, ", \"cached\": false");
+#endif
+        fprintf(s, "}\n");
         fclose(s);
     }
     if (trace) fclose(trace);

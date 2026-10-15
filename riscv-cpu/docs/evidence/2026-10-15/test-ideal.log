@@ -1,0 +1,463 @@
+ 18:10:38 up 19 min,  0 user,  load average: 101.03, 103.72, 65.10
+verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --top-module rv_core rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv
+verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --top-module rv_top rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv rtl/rv_cache.sv
+verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --top-module rv_top -GI_WAYS=2 -GD_WAYS=2 -GLINE_WORDS=8 rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv rtl/rv_cache.sv
+verilator --cc --exe --build -j 4 -O3 --x-assign fast --x-initial fast \
+  -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --assert \
+  -CFLAGS "-O2 -std=c++17" --top-module rv_core rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv tb/sim_main.cpp tb/iss.cpp
+make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+make[1]: Entering directory '/home/user/PROJECTS/riscv-cpu/obj_dir'
+g++  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -Os -c -o sim_main.o ../tb/sim_main.cpp
+g++     iss.o sim_main.o verilated.o verilated_threads.o Vrv_core__ALL.a    -pthread -lpthread -latomic   -o Vrv_core
+make[1]: Leaving directory '/home/user/PROJECTS/riscv-cpu/obj_dir'
+tools/run-tests.sh obj_dir/Vrv_core build/isa/rv32ui-p-add.elf build/isa/rv32ui-p-addi.elf build/isa/rv32ui-p-and.elf build/isa/rv32ui-p-andi.elf build/isa/rv32ui-p-auipc.elf build/isa/rv32ui-p-beq.elf build/isa/rv32ui-p-bge.elf build/isa/rv32ui-p-bgeu.elf build/isa/rv32ui-p-blt.elf build/isa/rv32ui-p-bltu.elf build/isa/rv32ui-p-bne.elf build/isa/rv32ui-p-fence_i.elf build/isa/rv32ui-p-jal.elf build/isa/rv32ui-p-jalr.elf build/isa/rv32ui-p-lb.elf build/isa/rv32ui-p-lbu.elf build/isa/rv32ui-p-ld_st.elf build/isa/rv32ui-p-lh.elf build/isa/rv32ui-p-lhu.elf build/isa/rv32ui-p-lui.elf build/isa/rv32ui-p-lw.elf build/isa/rv32ui-p-or.elf build/isa/rv32ui-p-ori.elf build/isa/rv32ui-p-sb.elf build/isa/rv32ui-p-sh.elf build/isa/rv32ui-p-simple.elf build/isa/rv32ui-p-sll.elf build/isa/rv32ui-p-slli.elf build/isa/rv32ui-p-slt.elf build/isa/rv32ui-p-slti.elf build/isa/rv32ui-p-sltiu.elf build/isa/rv32ui-p-sltu.elf build/isa/rv32ui-p-sra.elf build/isa/rv32ui-p-srai.elf build/isa/rv32ui-p-srl.elf build/isa/rv32ui-p-srli.elf build/isa/rv32ui-p-st_ld.elf build/isa/rv32ui-p-sub.elf build/isa/rv32ui-p-sw.elf build/isa/rv32ui-p-xor.elf build/isa/rv32ui-p-xori.elf build/isa/rv32um-p-div.elf build/isa/rv32um-p-divu.elf build/isa/rv32um-p-mul.elf build/isa/rv32um-p-mulh.elf build/isa/rv32um-p-mulhsu.elf build/isa/rv32um-p-mulhu.elf build/isa/rv32um-p-rem.elf build/isa/rv32um-p-remu.elf build/isa/rv32mi-p-breakpoint.elf build/isa/rv32mi-p-csr.elf build/isa/rv32mi-p-illegal.elf build/isa/rv32mi-p-instret_overflow.elf build/isa/rv32mi-p-lh-misaligned.elf build/isa/rv32mi-p-lw-misaligned.elf build/isa/rv32mi-p-ma_addr.elf build/isa/rv32mi-p-ma_fetch.elf build/isa/rv32mi-p-mcsr.elf build/isa/rv32mi-p-sbreak.elf build/isa/rv32mi-p-scall.elf build/isa/rv32mi-p-sh-misaligned.elf build/isa/rv32mi-p-shamt.elf build/isa/rv32mi-p-sw-misaligned.elf build/isa/rv32mi-p-zicntr.elf
+passed 64, failed 0
+tools/run-tests.sh --expect-fail obj_dir/Vrv_core build/isa/rv32ui-p-ma_data.elf build/isa/rv32mi-p-pmpaddr.elf
+expected failures: 2 as expected, 0 unexpected
+python3 tools/rvgen.py --count 200 --seed 1 --out build/rand
+make --no-print-directory rand-elfs
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100000.S -o build/rand/rand_100000.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100000.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100001.S -o build/rand/rand_100001.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100001.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100002.S -o build/rand/rand_100002.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100002.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100003.S -o build/rand/rand_100003.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100003.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100004.S -o build/rand/rand_100004.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100004.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100005.S -o build/rand/rand_100005.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100005.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100006.S -o build/rand/rand_100006.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100006.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100007.S -o build/rand/rand_100007.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100007.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100008.S -o build/rand/rand_100008.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100008.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100009.S -o build/rand/rand_100009.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100009.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100010.S -o build/rand/rand_100010.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100010.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100011.S -o build/rand/rand_100011.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100011.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100012.S -o build/rand/rand_100012.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100012.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100013.S -o build/rand/rand_100013.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100013.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100014.S -o build/rand/rand_100014.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100014.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100015.S -o build/rand/rand_100015.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100015.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100016.S -o build/rand/rand_100016.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100016.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100017.S -o build/rand/rand_100017.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100017.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100018.S -o build/rand/rand_100018.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100018.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100019.S -o build/rand/rand_100019.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100019.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100020.S -o build/rand/rand_100020.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100020.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100021.S -o build/rand/rand_100021.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100021.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100022.S -o build/rand/rand_100022.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100022.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100023.S -o build/rand/rand_100023.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100023.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100024.S -o build/rand/rand_100024.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100024.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100025.S -o build/rand/rand_100025.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100025.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100026.S -o build/rand/rand_100026.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100026.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100027.S -o build/rand/rand_100027.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100027.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100028.S -o build/rand/rand_100028.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100028.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100029.S -o build/rand/rand_100029.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100029.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100030.S -o build/rand/rand_100030.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100030.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100031.S -o build/rand/rand_100031.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100031.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100032.S -o build/rand/rand_100032.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100032.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100033.S -o build/rand/rand_100033.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100033.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100034.S -o build/rand/rand_100034.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100034.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100035.S -o build/rand/rand_100035.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100035.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100036.S -o build/rand/rand_100036.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100036.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100037.S -o build/rand/rand_100037.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100037.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100038.S -o build/rand/rand_100038.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100038.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100039.S -o build/rand/rand_100039.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100039.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100040.S -o build/rand/rand_100040.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100040.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100041.S -o build/rand/rand_100041.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100041.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100042.S -o build/rand/rand_100042.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100042.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100043.S -o build/rand/rand_100043.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100043.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100044.S -o build/rand/rand_100044.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100044.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100045.S -o build/rand/rand_100045.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100045.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100046.S -o build/rand/rand_100046.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100046.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100047.S -o build/rand/rand_100047.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100047.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100048.S -o build/rand/rand_100048.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100048.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100049.S -o build/rand/rand_100049.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100049.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100050.S -o build/rand/rand_100050.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100050.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100051.S -o build/rand/rand_100051.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100051.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100052.S -o build/rand/rand_100052.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100052.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100053.S -o build/rand/rand_100053.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100053.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100054.S -o build/rand/rand_100054.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100054.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100055.S -o build/rand/rand_100055.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100055.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100056.S -o build/rand/rand_100056.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100056.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100057.S -o build/rand/rand_100057.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100057.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100058.S -o build/rand/rand_100058.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100058.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100059.S -o build/rand/rand_100059.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100059.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100060.S -o build/rand/rand_100060.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100060.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100061.S -o build/rand/rand_100061.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100061.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100062.S -o build/rand/rand_100062.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100062.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100063.S -o build/rand/rand_100063.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100063.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100064.S -o build/rand/rand_100064.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100064.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100065.S -o build/rand/rand_100065.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100065.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100066.S -o build/rand/rand_100066.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100066.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100067.S -o build/rand/rand_100067.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100067.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100068.S -o build/rand/rand_100068.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100068.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100069.S -o build/rand/rand_100069.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100069.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100070.S -o build/rand/rand_100070.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100070.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100071.S -o build/rand/rand_100071.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100071.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100072.S -o build/rand/rand_100072.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100072.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100073.S -o build/rand/rand_100073.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100073.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100074.S -o build/rand/rand_100074.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100074.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100075.S -o build/rand/rand_100075.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100075.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100076.S -o build/rand/rand_100076.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100076.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100077.S -o build/rand/rand_100077.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100077.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100078.S -o build/rand/rand_100078.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100078.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100079.S -o build/rand/rand_100079.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100079.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100080.S -o build/rand/rand_100080.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100080.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100081.S -o build/rand/rand_100081.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100081.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100082.S -o build/rand/rand_100082.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100082.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100083.S -o build/rand/rand_100083.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100083.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100084.S -o build/rand/rand_100084.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100084.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100085.S -o build/rand/rand_100085.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100085.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100086.S -o build/rand/rand_100086.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100086.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100087.S -o build/rand/rand_100087.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100087.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100088.S -o build/rand/rand_100088.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100088.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100089.S -o build/rand/rand_100089.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100089.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100090.S -o build/rand/rand_100090.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100090.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100091.S -o build/rand/rand_100091.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100091.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100092.S -o build/rand/rand_100092.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100092.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100093.S -o build/rand/rand_100093.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100093.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100094.S -o build/rand/rand_100094.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100094.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100095.S -o build/rand/rand_100095.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100095.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100096.S -o build/rand/rand_100096.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100096.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100097.S -o build/rand/rand_100097.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100097.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100098.S -o build/rand/rand_100098.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100098.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100099.S -o build/rand/rand_100099.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100099.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100100.S -o build/rand/rand_100100.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100100.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100101.S -o build/rand/rand_100101.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100101.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100102.S -o build/rand/rand_100102.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100102.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100103.S -o build/rand/rand_100103.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100103.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100104.S -o build/rand/rand_100104.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100104.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100105.S -o build/rand/rand_100105.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100105.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100106.S -o build/rand/rand_100106.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100106.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100107.S -o build/rand/rand_100107.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100107.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100108.S -o build/rand/rand_100108.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100108.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100109.S -o build/rand/rand_100109.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100109.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100110.S -o build/rand/rand_100110.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100110.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100111.S -o build/rand/rand_100111.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100111.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100112.S -o build/rand/rand_100112.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100112.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100113.S -o build/rand/rand_100113.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100113.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100114.S -o build/rand/rand_100114.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100114.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100115.S -o build/rand/rand_100115.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100115.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100116.S -o build/rand/rand_100116.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100116.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100117.S -o build/rand/rand_100117.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100117.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100118.S -o build/rand/rand_100118.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100118.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100119.S -o build/rand/rand_100119.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100119.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100120.S -o build/rand/rand_100120.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100120.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100121.S -o build/rand/rand_100121.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100121.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100122.S -o build/rand/rand_100122.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100122.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100123.S -o build/rand/rand_100123.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100123.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100124.S -o build/rand/rand_100124.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100124.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100125.S -o build/rand/rand_100125.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100125.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100126.S -o build/rand/rand_100126.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100126.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100127.S -o build/rand/rand_100127.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100127.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100128.S -o build/rand/rand_100128.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100128.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100129.S -o build/rand/rand_100129.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100129.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100130.S -o build/rand/rand_100130.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100130.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100131.S -o build/rand/rand_100131.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100131.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100132.S -o build/rand/rand_100132.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100132.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100133.S -o build/rand/rand_100133.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100133.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100134.S -o build/rand/rand_100134.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100134.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100135.S -o build/rand/rand_100135.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100135.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100136.S -o build/rand/rand_100136.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100136.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100137.S -o build/rand/rand_100137.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100137.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100138.S -o build/rand/rand_100138.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100138.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100139.S -o build/rand/rand_100139.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100139.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100140.S -o build/rand/rand_100140.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100140.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100141.S -o build/rand/rand_100141.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100141.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100142.S -o build/rand/rand_100142.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100142.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100143.S -o build/rand/rand_100143.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100143.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100144.S -o build/rand/rand_100144.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100144.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100145.S -o build/rand/rand_100145.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100145.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100146.S -o build/rand/rand_100146.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100146.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100147.S -o build/rand/rand_100147.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100147.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100148.S -o build/rand/rand_100148.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100148.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100149.S -o build/rand/rand_100149.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100149.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100150.S -o build/rand/rand_100150.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100150.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100151.S -o build/rand/rand_100151.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100151.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100152.S -o build/rand/rand_100152.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100152.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100153.S -o build/rand/rand_100153.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100153.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100154.S -o build/rand/rand_100154.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100154.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100155.S -o build/rand/rand_100155.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100155.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100156.S -o build/rand/rand_100156.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100156.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100157.S -o build/rand/rand_100157.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100157.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100158.S -o build/rand/rand_100158.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100158.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100159.S -o build/rand/rand_100159.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100159.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100160.S -o build/rand/rand_100160.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100160.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100161.S -o build/rand/rand_100161.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100161.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100162.S -o build/rand/rand_100162.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100162.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100163.S -o build/rand/rand_100163.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100163.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100164.S -o build/rand/rand_100164.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100164.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100165.S -o build/rand/rand_100165.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100165.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100166.S -o build/rand/rand_100166.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100166.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100167.S -o build/rand/rand_100167.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100167.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100168.S -o build/rand/rand_100168.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100168.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100169.S -o build/rand/rand_100169.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100169.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100170.S -o build/rand/rand_100170.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100170.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100171.S -o build/rand/rand_100171.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100171.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100172.S -o build/rand/rand_100172.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100172.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100173.S -o build/rand/rand_100173.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100173.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100174.S -o build/rand/rand_100174.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100174.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100175.S -o build/rand/rand_100175.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100175.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100176.S -o build/rand/rand_100176.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100176.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100177.S -o build/rand/rand_100177.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100177.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100178.S -o build/rand/rand_100178.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100178.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100179.S -o build/rand/rand_100179.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100179.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100180.S -o build/rand/rand_100180.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100180.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100181.S -o build/rand/rand_100181.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100181.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100182.S -o build/rand/rand_100182.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100182.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100183.S -o build/rand/rand_100183.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100183.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100184.S -o build/rand/rand_100184.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100184.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100185.S -o build/rand/rand_100185.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100185.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100186.S -o build/rand/rand_100186.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100186.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100187.S -o build/rand/rand_100187.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100187.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100188.S -o build/rand/rand_100188.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100188.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100189.S -o build/rand/rand_100189.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100189.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100190.S -o build/rand/rand_100190.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100190.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100191.S -o build/rand/rand_100191.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100191.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100192.S -o build/rand/rand_100192.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100192.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100193.S -o build/rand/rand_100193.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100193.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100194.S -o build/rand/rand_100194.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100194.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100195.S -o build/rand/rand_100195.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100195.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100196.S -o build/rand/rand_100196.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100196.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100197.S -o build/rand/rand_100197.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100197.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100198.S -o build/rand/rand_100198.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100198.elf has a LOAD segment with RWX permissions
+riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100199.S -o build/rand/rand_100199.elf
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100199.elf has a LOAD segment with RWX permissions
+tools/run-tests.sh obj_dir/Vrv_core build/rand/*.elf
+passed 400, failed 0
+for s in 1 2 3 4 5 6 7 8; do obj_dir/Vrv_core --quiet --irq $s build/irq/irq_test.elf || exit 1; done
+PASS build/irq/irq_test.elf: exit=0 cycles=1088435 instret=319085 CPI=3.411 branches=27957 mispredicts=9 irqs=12479
+PASS build/irq/irq_test.elf: exit=0 cycles=1095605 instret=320701 CPI=3.416 branches=28015 mispredicts=9 irqs=12561
+PASS build/irq/irq_test.elf: exit=0 cycles=1049438 instret=306646 CPI=3.422 branches=26937 mispredicts=9 irqs=11878
+PASS build/irq/irq_test.elf: exit=0 cycles=1065998 instret=310223 CPI=3.436 branches=27265 mispredicts=9 irqs=12049
+PASS build/irq/irq_test.elf: exit=0 cycles=1085180 instret=317633 CPI=3.416 branches=27873 mispredicts=9 irqs=12407
+PASS build/irq/irq_test.elf: exit=0 cycles=1087111 instret=318231 CPI=3.416 branches=27768 mispredicts=9 irqs=12444
+PASS build/irq/irq_test.elf: exit=0 cycles=1075133 instret=315996 CPI=3.402 branches=27604 mispredicts=9 irqs=12335
+PASS build/irq/irq_test.elf: exit=0 cycles=1044977 instret=306691 CPI=3.407 branches=27001 mispredicts=9 irqs=11877
+verilator --cc --exe --build -j 4 -O3 --x-assign fast --x-initial fast --Mdir obj_dir_btb2 \
+  -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --assert -GBTB_BITS=2 \
+  -CFLAGS "-O2 -std=c++17" --top-module rv_core rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv tb/sim_main.cpp tb/iss.cpp
+make[1]: Entering directory '/home/user/PROJECTS/riscv-cpu/obj_dir_btb2'
+g++  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -Os -c -o sim_main.o ../tb/sim_main.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -c -o verilated.o /usr/share/verilator/include/verilated.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -c -o verilated_threads.o /usr/share/verilator/include/verilated_threads.cpp
+/usr/bin/python3 /usr/share/verilator/bin/verilator_includer -DVL_INCLUDE_OPT=include Vrv_core.cpp Vrv_core___024root__DepSet_h677edb17__0.cpp Vrv_core___024root__DepSet_h43962abc__0.cpp Vrv_core___024root__Slow.cpp Vrv_core___024root__DepSet_h677edb17__0__Slow.cpp Vrv_core___024root__DepSet_h43962abc__0__Slow.cpp Vrv_core__Syms.cpp > Vrv_core__ALL.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -c -o Vrv_core__ALL.o Vrv_core__ALL.cpp
+echo "" > Vrv_core__ALL.verilator_deplist.tmp
+Archive ar -rcs Vrv_core__ALL.a Vrv_core__ALL.o
+g++     iss.o sim_main.o verilated.o verilated_threads.o Vrv_core__ALL.a    -pthread -lpthread -latomic   -o Vrv_core
+rm Vrv_core__ALL.verilator_deplist.tmp
+make[1]: Leaving directory '/home/user/PROJECTS/riscv-cpu/obj_dir_btb2'
+verilator --cc --exe --build -j 4 -O3 --x-assign fast --x-initial fast --Mdir obj_dir_nobp \
+  -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --assert -GBPRED_EN=0 \
+  -CFLAGS "-O2 -std=c++17" --top-module rv_core rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv tb/sim_main.cpp tb/iss.cpp
+make[1]: Entering directory '/home/user/PROJECTS/riscv-cpu/obj_dir_nobp'
+g++  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -Os -c -o sim_main.o ../tb/sim_main.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -c -o verilated.o /usr/share/verilator/include/verilated.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -c -o verilated_threads.o /usr/share/verilator/include/verilated_threads.cpp
+/usr/bin/python3 /usr/share/verilator/bin/verilator_includer -DVL_INCLUDE_OPT=include Vrv_core.cpp Vrv_core___024root__DepSet_h677edb17__0.cpp Vrv_core___024root__DepSet_h43962abc__0.cpp Vrv_core___024root__Slow.cpp Vrv_core___024root__DepSet_h677edb17__0__Slow.cpp Vrv_core___024root__DepSet_h43962abc__0__Slow.cpp Vrv_core__Syms.cpp > Vrv_core__ALL.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -c -o Vrv_core__ALL.o Vrv_core__ALL.cpp
+echo "" > Vrv_core__ALL.verilator_deplist.tmp
+Archive ar -rcs Vrv_core__ALL.a Vrv_core__ALL.o
+g++     iss.o sim_main.o verilated.o verilated_threads.o Vrv_core__ALL.a    -pthread -lpthread -latomic   -o Vrv_core
+rm Vrv_core__ALL.verilator_deplist.tmp
+make[1]: Leaving directory '/home/user/PROJECTS/riscv-cpu/obj_dir_nobp'
+tools/run-tests.sh obj_dir_btb2/Vrv_core build/rand/*.elf
+passed 400, failed 0
+tools/run-tests.sh obj_dir_nobp/Vrv_core build/rand/*.elf
+passed 400, failed 0
+make test rc=0
+ 18:15:16 up 23 min,  0 user,  load average: 16.52, 53.25, 53.95
