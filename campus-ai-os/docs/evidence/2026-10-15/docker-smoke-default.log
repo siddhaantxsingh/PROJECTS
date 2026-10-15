@@ -1,0 +1,33 @@
+{"status":"ok"}
+SPA served
+{
+ "answer": "Collisions occur when two keys hash to the same bucket [1]. Separate chaining resolves collisions with per-bucket lists [1].",
+ "provider": "extractive",
+ "abstained": false,
+ "citations": [
+  {
+   "sentence": 0,
+   "sources": [
+    1
+   ]
+  },
+  {
+   "sentence": 1,
+   "sources": [
+    1
+   ]
+  }
+ ],
+ "grounding": {
+  "sentences": 2,
+  "supported": 2,
+  "uncited": 0,
+  "invalid_citations": 0,
+  "total_citations": 2,
+  "groundedness": 1.0,
+  "citation_precision": 1.0,
+  "unsupported_sentences": []
+ }
+}
+sources: [(1, 'CS201 Data Structures', [1, 1])]
+SMOKE OK (campus-ai-os:test)

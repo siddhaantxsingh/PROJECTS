@@ -7,6 +7,10 @@ Configuration (environment):
   CAMPUS_STATIC_DIR          built frontend (frontend/dist) to serve at /
   CAMPUS_SECURE_COOKIES      "1" behind HTTPS (sets the Secure flag)
   CAMPUS_LOGIN_PER_MIN       login attempts per client IP per minute (default 10)
+  CAMPUS_LLM_PROVIDER        "extractive" (default) or "llamacpp" (local GGUF model, e.g. Qwen2.5-0.5B-Instruct)
+  CAMPUS_LLM_GGUF            model key or path for llamacpp (default qwen2.5-0.5b; files under GW_MODEL_DIR)
+  CAMPUS_EMBEDDER            "nomic" for nomic-embed-text-v1.5 (needs CAMPUS_DIM=768 on a new database)
+  CAMPUS_RERANKER            "qwen3" for the Qwen3-Reranker-0.6B (slow on CPU)
 """
 from __future__ import annotations
 
@@ -94,7 +98,11 @@ def build(db_url: str, dim: int = 256) -> tuple[Db, Engine, Campus]:
     db.migrate()
     gconn = connect(db_url)
     migrate(gconn, dim)
-    engine = Engine(Store(gconn), EngineConfig(dim=dim, chunking=ChunkSpec("structure", 200, 0)))
+    from groundwork.config import apply_to_engine_config, provider_from_env
+
+    # Optional local models (CAMPUS_EMBEDDER, CAMPUS_LLM_PROVIDER, CAMPUS_RERANKER; see groundwork/config.py).
+    cfg = apply_to_engine_config(EngineConfig(dim=dim, chunking=ChunkSpec("structure", 200, 0)), prefix="CAMPUS_")
+    engine = Engine(Store(gconn), cfg, provider=provider_from_env("CAMPUS_"))
     return db, engine, Campus(db, engine)
 
 

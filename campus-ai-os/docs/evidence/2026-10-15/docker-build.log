@@ -1,0 +1,277 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.51kB 0.0s done
+#1 DONE 0.1s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 2.3s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 0B / 14.28MB 0.2s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 2.10MB / 14.28MB 0.5s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 6.29MB / 14.28MB 0.6s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 8.39MB / 14.28MB 0.8s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 12.58MB / 14.28MB 0.9s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 14.28MB / 14.28MB 1.0s done
+#3 extracting sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62
+#3 extracting sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 0.5s done
+#3 DONE 1.6s
+
+#4 [context groundwork] load .dockerignore
+#4 transferring groundwork: 138B done
+#4 DONE 0.1s
+
+#5 [internal] load metadata for docker.io/library/node:22-slim
+#5 DONE 0.9s
+
+#6 [internal] load metadata for docker.io/library/python:3.12-slim
+#6 DONE 1.5s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 188B done
+#7 DONE 0.0s
+
+#8 [web 1/6] FROM docker.io/library/node:22-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+#8 resolve docker.io/library/node:22-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 0.0s done
+#8 CACHED
+
+#9 [stage-1 1/8] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+#9 resolve docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 0.0s done
+#9 DONE 0.3s
+
+#10 [web 2/6] WORKDIR /web
+#10 DONE 0.1s
+
+#11 [context groundwork] load from client
+#11 transferring groundwork: 139.11kB done
+#11 DONE 0.1s
+
+#12 [internal] load build context
+#12 transferring context: 194.41kB 0.0s done
+#12 DONE 0.1s
+
+#13 [context groundwork] load from client
+#13 transferring groundwork: 1.03kB done
+#13 DONE 0.1s
+
+#14 [web 3/6] COPY frontend/package.json frontend/package-lock.json ./
+#14 DONE 0.8s
+
+#9 [stage-1 1/8] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+#9 extracting sha256:ecc510c1e359bdc007b39802570bb7e4dec7d6ebccf357c3201a74299113e05e
+#9 extracting sha256:ecc510c1e359bdc007b39802570bb7e4dec7d6ebccf357c3201a74299113e05e 9.7s done
+#9 DONE 10.0s
+
+#15 [web 4/6] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi && npm ci
+#15 ...
+
+#9 [stage-1 1/8] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+#9 extracting sha256:75b6a36c64a1cf3520fc4b4aae4739d5caa8a6a05c27835a920a61784c9c32f8
+#9 extracting sha256:75b6a36c64a1cf3520fc4b4aae4739d5caa8a6a05c27835a920a61784c9c32f8 0.5s done
+#9 extracting sha256:6912e23eb44595b44dc6d9882b34f305ad6f6e9667cec70b13e5dbc4f8cd97f4
+#9 extracting sha256:6912e23eb44595b44dc6d9882b34f305ad6f6e9667cec70b13e5dbc4f8cd97f4 2.4s done
+#9 DONE 12.8s
+
+#15 [web 4/6] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi && npm ci
+#15 ...
+
+#9 [stage-1 1/8] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+#9 extracting sha256:bbc5a12237474ec0b23b5051260d56d6436a24d70d9cad961adebe7a037ed813 0.0s done
+#9 DONE 12.9s
+
+#16 [stage-1 2/8] RUN useradd --create-home --uid 10001 app
+#16 DONE 1.1s
+
+#15 [web 4/6] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi && npm ci
+#15 ...
+
+#17 [stage-1 3/8] WORKDIR /app
+#17 DONE 0.1s
+
+#18 [stage-1 4/8] COPY --from=groundwork pyproject.toml /deps/groundwork/pyproject.toml
+#18 DONE 0.1s
+
+#19 [stage-1 5/8] COPY --from=groundwork groundwork /deps/groundwork/groundwork
+#19 DONE 0.1s
+
+#15 [web 4/6] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi && npm ci
+#15 ...
+
+#20 [stage-1 6/8] COPY backend ./backend
+#20 DONE 0.1s
+
+#21 [stage-1 7/8] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi     && pip install --no-cache-dir /deps/groundwork ./backend
+#21 3.095 Processing /deps/groundwork
+#21 3.105   Installing build dependencies: started
+#21 8.866   Installing build dependencies: finished with status 'done'
+#21 8.866   Getting requirements to build wheel: started
+#21 9.515   Getting requirements to build wheel: finished with status 'done'
+#21 9.517   Preparing metadata (pyproject.toml): started
+#21 10.23   Preparing metadata (pyproject.toml): finished with status 'done'
+#21 10.24 Processing ./backend
+#21 10.24   Installing build dependencies: started
+#21 14.45   Installing build dependencies: finished with status 'done'
+#21 14.45   Getting requirements to build wheel: started
+#21 14.82   Getting requirements to build wheel: finished with status 'done'
+#21 14.83   Preparing metadata (pyproject.toml): started
+#21 15.75   Preparing metadata (pyproject.toml): finished with status 'done'
+#21 15.93 Collecting fastapi>=0.110 (from groundwork==0.1.0)
+#21 16.02   Downloading fastapi-0.143.1-py3-none-any.whl.metadata (26 kB)
+#21 16.11 Collecting uvicorn>=0.29 (from groundwork==0.1.0)
+#21 16.14   Downloading uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
+#21 16.19 Collecting python-multipart>=0.0.9 (from groundwork==0.1.0)
+#21 16.21   Downloading python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+#21 16.26 Collecting psycopg>=3.1 (from psycopg[binary]>=3.1->groundwork==0.1.0)
+#21 16.29   Downloading psycopg-3.3.6-py3-none-any.whl.metadata (4.4 kB)
+#21 16.34 Collecting pgvector>=0.2 (from groundwork==0.1.0)
+#21 16.38   Downloading pgvector-0.5.1-py3-none-any.whl.metadata (19 kB)
+#21 16.52 Collecting redis>=5 (from groundwork==0.1.0)
+#21 16.55   Downloading redis-8.1.0-py3-none-any.whl.metadata (16 kB)
+#21 17.20 Collecting numpy>=1.26 (from groundwork==0.1.0)
+#21 17.22   Downloading numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+#21 17.38 Collecting scipy>=1.11 (from groundwork==0.1.0)
+#21 17.40   Downloading scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+#21 17.56 Collecting pypdf>=4 (from groundwork==0.1.0)
+#21 17.58   Downloading pypdf-6.20.1-py3-none-any.whl.metadata (7.6 kB)
+#21 17.74 Collecting httpx>=0.27 (from groundwork==0.1.0)
+#21 17.80   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+#21 18.04 Collecting starlette>=0.46.0 (from fastapi>=0.110->groundwork==0.1.0)
+#21 18.07   Downloading starlette-1.8.0-py3-none-any.whl.metadata (6.6 kB)
+#21 18.35 Collecting pydantic>=2.9.0 (from fastapi>=0.110->groundwork==0.1.0)
+#21 18.37   Downloading pydantic-2.14.1-py3-none-any.whl.metadata (133 kB)
+#21 18.47 Collecting typing-extensions>=4.8.0 (from fastapi>=0.110->groundwork==0.1.0)
+#21 18.50   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+#21 18.53 Collecting typing-inspection>=0.4.2 (from fastapi>=0.110->groundwork==0.1.0)
+#21 18.57   Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+#21 18.72 Collecting annotated-doc>=0.0.2 (from fastapi>=0.110->groundwork==0.1.0)
+#21 18.75   Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+#21 18.82 Collecting opentelemetry-api>=1.44.0 (from fastapi>=0.110->groundwork==0.1.0)
+#21 18.86   Downloading opentelemetry_api-1.45.1-py3-none-any.whl.metadata (1.4 kB)
+#21 18.93 Collecting anyio (from httpx>=0.27->groundwork==0.1.0)
+#21 18.95   Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+#21 19.01 Collecting certifi (from httpx>=0.27->groundwork==0.1.0)
+#21 19.04   Downloading certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+#21 19.13 Collecting httpcore==1.* (from httpx>=0.27->groundwork==0.1.0)
+#21 19.16   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#21 19.21 Collecting idna (from httpx>=0.27->groundwork==0.1.0)
+#21 19.24   Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+#21 19.29 Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.27->groundwork==0.1.0)
+#21 19.33   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#21 19.87 Collecting psycopg-binary==3.3.6 (from psycopg[binary]>=3.1->groundwork==0.1.0)
+#21 19.90   Downloading psycopg_binary-3.3.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.7 kB)
+#21 20.07 Collecting click>=7.0 (from uvicorn>=0.29->groundwork==0.1.0)
+#21 20.10   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+#21 20.17 Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi>=0.110->groundwork==0.1.0)
+#21 20.19   Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+#21 22.13 Collecting pydantic-core==2.50.1 (from pydantic>=2.9.0->fastapi>=0.110->groundwork==0.1.0)
+#21 22.15   Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.5 kB)
+#21 22.37 Downloading fastapi-0.143.1-py3-none-any.whl (144 kB)
+#21 22.40 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+#21 22.43 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#21 22.46 Downloading numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.7 MB)
+#21 23.85    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.7/16.7 MB 12.0 MB/s eta 0:00:00
+#21 23.87 Downloading pgvector-0.5.1-py3-none-any.whl (31 kB)
+#21 23.89 Downloading psycopg-3.3.6-py3-none-any.whl (215 kB)
+#21 23.93 Downloading psycopg_binary-3.3.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (5.2 MB)
+#21 24.47    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.2/5.2 MB 9.9 MB/s eta 0:00:00
+#21 24.49 Downloading pypdf-6.20.1-py3-none-any.whl (402 kB)
+#21 24.55 Downloading python_multipart-0.0.32-py3-none-any.whl (30 kB)
+#21 24.57 Downloading redis-8.1.0-py3-none-any.whl (560 kB)
+#21 24.63    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 560.6/560.6 kB 9.9 MB/s eta 0:00:00
+#21 24.65 Downloading scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+#21 ...
+
+#15 [web 4/6] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi && npm ci
+#15 40.08 
+#15 40.08 added 73 packages, and audited 74 packages in 28s
+#15 40.08 
+#15 40.08 9 packages are looking for funding
+#15 40.08   run `npm fund` for details
+#15 40.19 
+#15 40.19 3 high severity vulnerabilities
+#15 40.19 
+#15 40.19 To address all issues, run:
+#15 40.19   npm audit fix --force
+#15 40.19 
+#15 40.19 Run `npm audit` for details.
+#15 40.19 npm notice
+#15 40.19 npm notice New major version of npm available! 10.9.9 -> 12.2.0
+#15 40.19 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+#15 40.19 npm notice To update run: npm install -g npm@12.2.0
+#15 40.19 npm notice
+#15 DONE 40.6s
+
+#22 [web 5/6] COPY frontend ./
+#22 DONE 0.1s
+
+#21 [stage-1 7/8] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi     && pip install --no-cache-dir /deps/groundwork ./backend
+#21 27.42    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.3/35.3 MB 12.8 MB/s eta 0:00:00
+#21 27.46 Downloading uvicorn-0.54.0-py3-none-any.whl (87 kB)
+#21 27.48 Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+#21 27.50 Downloading click-8.5.0-py3-none-any.whl (125 kB)
+#21 27.52 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#21 27.54 Downloading opentelemetry_api-1.45.1-py3-none-any.whl (60 kB)
+#21 27.56 Downloading pydantic-2.14.1-py3-none-any.whl (488 kB)
+#21 27.61 Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.2 MB)
+#21 27.72    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 20.0 MB/s eta 0:00:00
+#21 27.75 Downloading starlette-1.8.0-py3-none-any.whl (79 kB)
+#21 27.77 Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
+#21 27.79 Downloading idna-3.20-py3-none-any.whl (69 kB)
+#21 27.82 Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+#21 27.84 Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+#21 27.87 Downloading certifi-2026.7.22-py3-none-any.whl (136 kB)
+#21 27.90 Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+#21 28.11 Building wheels for collected packages: groundwork, campus-ai-os
+#21 28.12   Building wheel for groundwork (pyproject.toml): started
+#21 28.83   Building wheel for groundwork (pyproject.toml): finished with status 'done'
+#21 28.83   Created wheel for groundwork: filename=groundwork-0.1.0-py3-none-any.whl size=53910 sha256=1d290199135ced2424e0746745d00900a995a879cf8d9c3b4e76e351d7eeac12
+#21 28.83   Stored in directory: /tmp/pip-ephem-wheel-cache-xes24_u_/wheels/6b/82/85/f2cbeba2a8e68bf48cb7ebb180dd8f4fc674b8e146e8f2d2f2
+#21 28.84   Building wheel for campus-ai-os (pyproject.toml): started
+#21 29.33   Building wheel for campus-ai-os (pyproject.toml): finished with status 'done'
+#21 29.33   Created wheel for campus-ai-os: filename=campus_ai_os-0.1.0-py3-none-any.whl size=20082 sha256=e685bb88bab68ca99fdef3dd2307f975576f8dc96e46af3606086fde57e287b5
+#21 29.34   Stored in directory: /tmp/pip-ephem-wheel-cache-xes24_u_/wheels/91/0a/7b/e1306506b94d5eedf38bd9e74910a6a2271d810c5fb6bdbeda
+#21 29.34 Successfully built groundwork campus-ai-os
+#21 29.61 Installing collected packages: typing-extensions, redis, python-multipart, pypdf, psycopg-binary, pgvector, numpy, idna, h11, click, certifi, annotated-types, annotated-doc, uvicorn, typing-inspection, scipy, pydantic-core, psycopg, opentelemetry-api, httpcore, anyio, starlette, pydantic, httpx, fastapi, groundwork, campus-ai-os
+#21 ...
+
+#23 [web 6/6] RUN npm run build
+#23 0.460 
+#23 0.460 > campus-ai-os-frontend@0.1.0 build
+#23 0.460 > tsc -b && vite build
+#23 0.460 
+#23 10.77 vite v7.1.5 building for production...
+#23 10.98 transforming...
+#23 18.54 ✓ 30 modules transformed.
+#23 19.96 rendering chunks...
+#23 20.00 computing gzip size...
+#23 20.10 dist/index.html                   0.40 kB │ gzip:  0.27 kB
+#23 20.10 dist/assets/index-BgzBxGsg.css    3.11 kB │ gzip:  1.13 kB
+#23 20.10 dist/assets/index--rcsvvSq.js   205.31 kB │ gzip: 64.12 kB
+#23 20.10 ✓ built in 9.25s
+#23 DONE 21.5s
+
+#21 [stage-1 7/8] RUN --mount=type=secret,id=ca,required=false     if [ -s /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi     && pip install --no-cache-dir /deps/groundwork ./backend
+#21 53.80 Successfully installed annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 campus-ai-os-0.1.0 certifi-2026.7.22 click-8.5.0 fastapi-0.143.1 groundwork-0.1.0 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.20 numpy-2.5.4 opentelemetry-api-1.45.1 pgvector-0.5.1 psycopg-3.3.6 psycopg-binary-3.3.6 pydantic-2.14.1 pydantic-core-2.50.1 pypdf-6.20.1 python-multipart-0.0.32 redis-8.1.0 scipy-1.18.1 starlette-1.8.0 typing-extensions-4.16.0 typing-inspection-0.4.4 uvicorn-0.54.0
+#21 53.80 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#21 53.89 
+#21 53.89 [notice] A new release of pip is available: 25.0.1 -> 26.2.1
+#21 53.89 [notice] To update, run: pip install --upgrade pip
+#21 DONE 54.9s
+
+#24 [stage-1 8/8] COPY --from=web /web/dist ./static
+#24 DONE 0.1s
+
+#25 exporting to image
+#25 exporting layers
+#25 exporting layers 13.1s done
+#25 exporting manifest sha256:8d9f088fce2ad4186f404b32ff1c7b710e3b50c8f211dff1f931c96d7aaabb7c 0.0s done
+#25 exporting config sha256:92f2679f41d4e4124833eb578bb979d239e825059ef74e4d9ef5fb64da74eac2 0.1s done
+#25 exporting attestation manifest sha256:c32a0fb3b948d11e4fc98e2886d5f74d9df9efa83c9b6c4255d32b6153fddb9e 0.0s done
+#25 exporting manifest list sha256:8b1c06196649dc0f9481a51297e6dbe05da0037ad8956da68b991c987af41b66 0.0s done
+#25 naming to docker.io/library/campus-ai-os:test done
+#25 unpacking to docker.io/library/campus-ai-os:test
+#25 unpacking to docker.io/library/campus-ai-os:test 5.0s done
+#25 DONE 18.5s
+exit=0

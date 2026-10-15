@@ -5,7 +5,8 @@ export type Course = { id: string; code: string; title: string; role: "instructo
 export type Doc = { id: string; name: string; bytes: number; pages: number; created_at: string };
 export type Source = { n: number; document: string; doc_id: string; pages: [number, number]; section: string; excerpt: string };
 export type Answer = {
-  answer: string; abstained: boolean; question_id: string; sources: Source[];
+  answer: string; abstained: boolean; question_id: string; sources: Source[]; provider: string;
+  usage?: { dropped_sentences?: number; tokens_out?: number };
   grounding: { groundedness: number | null; citation_precision: number | null };
   timings_ms: Record<string, number>; excluded_sources: { document: string; reasons: string[] }[];
 };
