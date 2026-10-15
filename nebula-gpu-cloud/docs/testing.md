@@ -97,7 +97,7 @@ Real `nebulad` and `nebula-agent --runtime docker` processes, with the real Dock
 
 * **Limits and hardening.** A probe job prints its uid/gid (65534), fails to write to `/` (read-only rootfs), shows `CapEff` 0 and `NoNewPrivs` 1, sees only the `lo` interface, and can write to `/tmp`. A running container's `docker inspect` shows 0.5 CPU, 64 MiB memory and swap, read-only root, `CapDrop [ALL]`, `no-new-privileges`, network `none`, PID limit 256, user `65534:65534`, and the `nebula.*` labels.
 * **Cancel.** Cancelling a job runs its SIGTERM handler, then the container is removed. A job whose PID 1 ignores SIGTERM (`sleep`) is killed after the 2 s grace period, not before.
-* **OOM.** `tail /dev/zero` under a 16 MiB limit fails the job with `exit code 137 ... OOM-killed (memory limit 16 MiB)`. A small job on the same node still succeeds.
+* **OOM.** `tail /dev/zero` under a 16 MiB limit fails the job with `exit code 137 ... OOM-killed (memory limit 16 MiB)`. Docker on GitHub's cgroup-v2 runner did not set `OOMKilled`; there the agent reports `killed by SIGKILL; probable OOM`, and the test accepts either. A small job on the same node still succeeds.
 * **Orphans.** The agent is SIGKILLed while a job's container runs. The container survives. A new agent with the same id removes it and runs attempt 1 in a new container.
 * **GPU detection.** A stand-in `nvidia-smi` script prints one RTX 4060 line. The node registers with that name, `memory_mb` 8188 and the UUID, and a job constrained to that model runs with `CUDA_VISIBLE_DEVICES=0`.
 

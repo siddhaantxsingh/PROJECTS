@@ -369,7 +369,12 @@ async fn container_oom_kill_fails_the_job() {
     let reason = v["state"]["reason"].as_str().unwrap();
     eprintln!("OOM job reason: {reason}");
     assert!(reason.contains("exit code 137"), "{reason}");
-    assert!(reason.contains("OOM-killed (memory limit 16 MiB)"), "{reason}");
+    // cgroup v1 hosts (this machine) report OOMKilled; some cgroup v2 hosts
+    // (GitHub's runners) do not, and the agent falls back to "probable OOM"
+    assert!(
+        reason.contains("OOM-killed (memory limit 16 MiB)") || reason.contains("probable OOM (memory limit 16 MiB"),
+        "{reason}"
+    );
     // a job within its limit on the same node still succeeds
     let ok = e
         .submit(json!({"gpus": 1, "est_runtime": 5, "memory_mb": 16, "command": ["true"]}))

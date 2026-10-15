@@ -254,6 +254,16 @@ impl Agent {
                             if i.code == 0 { 137 } else { i.code },
                             format!("OOM-killed (memory limit {} MiB)", p.memory_mb),
                         ),
+                        // Some Docker/cgroup-v2 setups (e.g. GitHub's runners)
+                        // report OOMKilled=false for a cgroup OOM kill. An
+                        // unrequested SIGKILL is then the best evidence left.
+                        Ok(i) if i.code == 137 && p.stopping.is_none() => (
+                            137,
+                            format!(
+                                "killed by SIGKILL; probable OOM (memory limit {} MiB; Docker did not report OOMKilled)",
+                                p.memory_mb
+                            ),
+                        ),
                         Ok(i) => (i.code, String::new()),
                         Err(e) => (128 + 9, format!("inspect: {e}")),
                     };

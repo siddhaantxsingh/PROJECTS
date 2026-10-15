@@ -11,6 +11,7 @@
   * One `docker ps` per heartbeat interval, plus `inspect`/`logs`/`rm` when a container exits. This is fine for tens of containers per node, not for hundreds.
   * The CLI calls block the agent's single-threaded event loop for their duration.
   * Logs are copied with `docker logs` after the container exits, not streamed.
+  * OOM detection relies on Docker's `OOMKilled` flag. Where Docker does not set it (seen on a cgroup-v2 CI runner), any SIGKILL the agent did not send is reported as a probable OOM, which can be wrong (for example an external `docker kill`).
   * Orphaned containers (after an agent crash) are removed, not adopted. The control plane requeues all of a node's jobs when the node registers again, so adopting them would run the job twice.
   * The job gets a read-only root and a 64 MiB `/tmp` tmpfs; there is no persistent volume or dataset mount.
   * Rootless Docker, user namespaces, seccomp profiles beyond Docker's default, and gVisor are not configured.
