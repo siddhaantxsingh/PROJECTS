@@ -2,7 +2,7 @@
 
 EdgeFleet is a control plane, a device agent and a CLI for updating fleets of edge devices safely, written in Go with only the standard library. It provides:
 
-- **signed releases**, verified on the device;
+- **signed releases**, verified on the device, with optional **release-key rotation** (a pinned root key signs a versioned, expiring key set; revoked keys and key-set rollback are refused; not TUF);
 - **Ed25519 device identity** with replay-safe signed requests;
 - **A/B installs** with trial boots, health checks and **automatic rollback**;
 - **staged rollouts**, whose health gates halt a bad release at the canary and roll it back.
@@ -17,6 +17,18 @@ The state on both sides survives a crash at any step.
   - not deployed.
 
 See [limitations](docs/limitations.md).
+
+Key rotation (optional):
+
+```bash
+ROOT=$(./fleetctl keygen -out root.key); RELA=$(./fleetctl keygen -out rel-a.key)
+./fleetctl keyset -root root.key -set-version 1 -ttl 720h -keys rel-a=$RELA -out ks1.json
+./fleetd -data fleet-data -root-pubkey "$ROOT" -keyset ks1.json &          # devices: fleet-agent -root-pubkey "$ROOT" ...
+./fleetctl release -key rel-a.key -key-id rel-a -version 2.0 -file app-v2
+RELB=$(./fleetctl keygen -out rel-b.key)                                     # rotate, revoke rel-a
+./fleetctl keyset -root root.key -set-version 2 -ttl 720h -keys rel-b=$RELB -revoke rel-a -out ks2.json
+./fleetctl keyset-push -file ks2.json
+```
 
 ## Results ([docs/benchmarks.md](docs/benchmarks.md))
 
@@ -53,3 +65,12 @@ An application is an executable that supports `app run` (the long-running servic
 - [Benchmarks](docs/benchmarks.md)
 - [Limitations](docs/limitations.md)
 - [Requirements matrix](docs/requirements.md)
+
+## Scorecard (2026-10-15, self-assessed)
+
+| Score | /10 | Why not higher |
+|---|---|---|
+| Fresher-portfolio strength | 8 | Crash-safe A/B updates, staged rollouts and key rotation are well tested, but it has never run on real devices. |
+| Engineering maturity | 7 | Crash-at-every-step, mutation-checked and real-binary tests; but one lock on the heartbeat path and no TLS. |
+| Deployment readiness | 3 | Not deployed, no TLS, no bootloader integration, no HA, shared admin token. |
+| Completion of intended scope | 7 | OTA, rollouts and release-key rotation done; TUF, device-key rotation and delta updates are not. |

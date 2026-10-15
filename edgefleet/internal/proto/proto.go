@@ -65,11 +65,15 @@ type UpdateResult struct {
 
 // Desired is the server's answer to a heartbeat.
 type Desired struct {
-	Version      string    `json:"version,omitempty"` // "" = keep what you have
-	Manifest     *Manifest `json:"manifest,omitempty"`
-	Signature    string    `json:"signature,omitempty"` // base64 Ed25519 over Manifest.Bytes()
-	ArtifactURL  string    `json:"artifact_url,omitempty"`
-	HeartbeatSec int       `json:"heartbeat_sec"`
+	Version     string    `json:"version,omitempty"` // "" = keep what you have
+	Manifest    *Manifest `json:"manifest,omitempty"`
+	Signature   string    `json:"signature,omitempty"` // base64 Ed25519 over Manifest.Bytes()
+	ArtifactURL string    `json:"artifact_url,omitempty"`
+	// Key-rotation mode: the release key that signed the manifest, and the
+	// server's current root-signed key set (see keyset.go).
+	KeyID        string        `json:"key_id,omitempty"`
+	KeySet       *SignedKeySet `json:"key_set,omitempty"`
+	HeartbeatSec int           `json:"heartbeat_sec"`
 }
 
 // Manifest describes a release artifact.

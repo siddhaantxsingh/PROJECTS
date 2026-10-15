@@ -1,7 +1,9 @@
 // fleetctl: administration CLI.
 //
 //	fleetctl keygen -out release.key                       # prints the public key
-//	fleetctl release -key release.key -version 2.0 -file app [-sim-health ok]
+//	fleetctl release -key release.key -version 2.0 -file app [-sim-health ok] [-key-id rel-2026a]
+//	fleetctl keyset -root root.key -set-version 2 -ttl 720h -keys rel-b=PUB[,..] [-revoke rel-a,..] [-out keyset.json]
+//	fleetctl keyset-push -file keyset.json                # rotate the server's key set
 //	fleetctl token
 //	fleetctl rollout -version 2.0 [-waves 5,25,100] [-max-failure 0.2] [-bake 10m] [-from 1.0] [-selector k=v]
 //	fleetctl status ROLLOUT_ID | pause ID | resume ID | abort ID
@@ -51,6 +53,12 @@ func main() {
 	from := fs.String("from", "", "rollout: version to roll back to (default: most common)")
 	minrep := fs.Float64("min-report", 0.9, "rollout: fraction of a wave that must report")
 	sel := fs.String("selector", "", "rollout: k=v[,k=v] label selector")
+	keyID := fs.String("key-id", "", "release: id of the release key in the key set (key-rotation mode)")
+	rootf := fs.String("root", "root.key", "keyset: root private key file")
+	setVer := fs.Uint64("set-version", 0, "keyset: key-set version (must increase on every rotation)")
+	ttl := fs.Duration("ttl", 30*24*time.Hour, "keyset: validity from now")
+	keys := fs.String("keys", "", "keyset: id=base64pub[,id=base64pub] valid release keys")
+	revoke := fs.String("revoke", "", "keyset: id[,id] revoked release key ids (keep earlier revocations)")
 	fs.Parse(args)
 	call := func(method, path string, body []byte) {
 		req, _ := http.NewRequest(method, *server+path, bytes.NewReader(body))
@@ -89,7 +97,42 @@ func main() {
 		h := sha256.Sum256(data)
 		m := &proto.Manifest{Version: *ver, Size: int64(len(data)), SHA256: hex.EncodeToString(h[:]), SimHealth: *sim}
 		q := url.Values{"version": {*ver}, "signature": {proto.SignManifest(ed25519.PrivateKey(priv), m)}, "sim_health": {*sim}}
+		if *keyID != "" {
+			q.Set("key_id", *keyID)
+		}
 		call("POST", "/v1/admin/releases?"+q.Encode(), data)
+	case "keyset":
+		priv, err := os.ReadFile(*rootf)
+		if err != nil || len(priv) != ed25519.PrivateKeySize {
+			fail(fmt.Errorf("bad root key file %s", *rootf))
+		}
+		ks := proto.KeySet{Version: *setVer, Expires: time.Now().Add(*ttl).Unix()}
+		for _, kv := range strings.Split(*keys, ",") {
+			id, pub, ok := strings.Cut(kv, "=")
+			if !ok {
+				fail(fmt.Errorf("-keys: want id=base64pub, got %q", kv))
+			}
+			ks.Keys = append(ks.Keys, proto.ReleaseKey{ID: id, PublicKey: pub})
+		}
+		if *revoke != "" {
+			ks.Revoked = strings.Split(*revoke, ",")
+		}
+		signed := proto.SignKeySet(ed25519.PrivateKey(priv), ks)
+		if err := proto.VerifyKeySet(ed25519.PrivateKey(priv).Public().(ed25519.PublicKey), &signed, time.Now()); err != nil {
+			fail(err)
+		}
+		b, _ := json.MarshalIndent(signed, "", "  ")
+		if *out == "release.key" {
+			fmt.Println(string(b))
+		} else if err := os.WriteFile(*out, b, 0o644); err != nil {
+			fail(err)
+		}
+	case "keyset-push":
+		b, err := os.ReadFile(*file)
+		if err != nil {
+			fail(err)
+		}
+		call("PUT", "/v1/admin/keyset", b)
 	case "token":
 		call("POST", "/v1/admin/tokens", nil)
 	case "rollout":
@@ -119,7 +162,6 @@ func main() {
 	default:
 		fail(fmt.Errorf("unknown command %s", cmd))
 	}
-	_ = time.Second
 }
 
 func env(k, d string) string {

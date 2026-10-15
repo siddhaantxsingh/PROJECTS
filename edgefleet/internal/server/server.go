@@ -29,9 +29,13 @@ import (
 
 // Config for the control plane.
 type Config struct {
-	DataDir      string
-	AdminToken   string
-	ReleaseKey   ed25519.PublicKey // only releases signed by this key are accepted
+	DataDir    string
+	AdminToken string
+	ReleaseKey ed25519.PublicKey // only releases signed by this key are accepted
+	// Key-rotation mode (used instead of ReleaseKey when RootKey is set):
+	// releases must be signed by a key in the current root-signed key set.
+	RootKey      ed25519.PublicKey
+	KeySet       *proto.SignedKeySet // initial key set; a newer one saved in DataDir wins
 	HeartbeatSec int
 	OfflineAfter time.Duration
 	TickInterval time.Duration
@@ -55,6 +59,8 @@ type Server struct {
 	softs   map[string]*soft
 	nonceMu sync.Mutex
 	nonces  map[string]int64 // deviceID|nonce -> ts
+	trustMu sync.Mutex
+	trust   *proto.Trust // nil unless key-rotation mode
 	stop    chan struct{}
 	wg      sync.WaitGroup
 
@@ -92,6 +98,12 @@ func New(cfg Config) (*Server, error) {
 	}
 	os.MkdirAll(filepath.Join(cfg.DataDir, "artifacts"), 0o755)
 	s := &Server{cfg: cfg, st: st, softs: map[string]*soft{}, nonces: map[string]int64{}, stop: make(chan struct{})}
+	if cfg.RootKey != nil {
+		if err := s.loadTrust(); err != nil {
+			st.Close()
+			return nil, err
+		}
+	}
 	s.wg.Add(1)
 	go s.controller()
 	return s, nil
@@ -120,6 +132,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /v1/artifacts/{version}", s.artifact)
 	m.HandleFunc("POST /v1/admin/tokens", s.admin(s.newToken))
 	m.HandleFunc("POST /v1/admin/releases", s.admin(s.newRelease))
+	m.HandleFunc("PUT /v1/admin/keyset", s.admin(s.putKeySet))
 	m.HandleFunc("POST /v1/admin/rollouts", s.admin(s.newRollout))
 	m.HandleFunc("GET /v1/admin/rollouts/{id}", s.admin(s.getRollout))
 	m.HandleFunc("POST /v1/admin/rollouts/{id}/{action}", s.admin(s.rolloutAction))
@@ -286,12 +299,13 @@ func (s *Server) heartbeat(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	resp := proto.Desired{HeartbeatSec: s.cfg.HeartbeatSec}
+	resp := proto.Desired{HeartbeatSec: s.cfg.HeartbeatSec, KeySet: s.currentKeySet()}
 	if want := rollout.Desired(ro, d); want != "" && want != d.Version {
 		if rel := s.st.S.Releases[want]; rel != nil {
 			resp.Version = want
 			resp.Manifest = &proto.Manifest{Version: rel.Version, Size: rel.Size, SHA256: rel.SHA256, SimHealth: rel.SimHealth}
 			resp.Signature = rel.Signature
+			resp.KeyID = rel.KeyID
 			resp.ArtifactURL = "/v1/artifacts/" + rel.Version
 		}
 	}
@@ -371,7 +385,15 @@ func (s *Server) newRelease(w http.ResponseWriter, r *http.Request) {
 	tmp.Sync()
 	tmp.Close()
 	m := &proto.Manifest{Version: ver, Size: n, SHA256: hex.EncodeToString(h.Sum(nil)), SimHealth: q.Get("sim_health")}
-	if err := proto.VerifyManifest(s.cfg.ReleaseKey, m, q.Get("signature")); err != nil {
+	if s.trust != nil {
+		s.trustMu.Lock()
+		err := s.trust.VerifyRelease(m, q.Get("signature"), q.Get("key_id"), s.cfg.Now())
+		s.trustMu.Unlock()
+		if err != nil {
+			errJSON(w, http.StatusUnprocessableEntity, "release signature rejected: "+err.Error())
+			return
+		}
+	} else if err := proto.VerifyManifest(s.cfg.ReleaseKey, m, q.Get("signature")); err != nil {
 		errJSON(w, http.StatusUnprocessableEntity, "release signature does not verify with the configured release key")
 		return
 	}
@@ -386,7 +408,7 @@ func (s *Server) newRelease(w http.ResponseWriter, r *http.Request) {
 		errJSON(w, http.StatusInternalServerError, "storage failure")
 		return
 	}
-	rel := &store.Release{Version: ver, Size: n, SHA256: m.SHA256, Signature: q.Get("signature"), SimHealth: m.SimHealth, Path: final, Created: s.now()}
+	rel := &store.Release{Version: ver, Size: n, SHA256: m.SHA256, Signature: q.Get("signature"), KeyID: q.Get("key_id"), SimHealth: m.SimHealth, Path: final, Created: s.now()}
 	if err := s.st.Append(store.Event{Release: rel}, s.now()); err != nil {
 		errJSON(w, http.StatusInternalServerError, "store failure")
 		return

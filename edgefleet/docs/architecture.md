@@ -12,6 +12,10 @@
 ## Trust model
 
 * **Release key.** Kept offline by the operator (`fleetctl keygen`). `fleetd` accepts an upload only if the signature verifies with the configured public key. Agents pin the same public key and verify the signature *and* the SHA-256 of the downloaded bytes before installing. A compromised control plane can therefore withhold or delay updates, but cannot make a device run unsigned code. The tests modify a stored artifact after upload, and the agents reject it.
+* **Release-key rotation (optional, `-root-pubkey`).** Instead of one pinned release key, devices pin an offline **root key**. The root signs a **key set**: a version, an expiry time, the valid release keys (by id) and the revoked ids (`fleetctl keyset`). `fleetd` serves the current set in every heartbeat reply, and `fleetctl keyset-push` rotates it.
+  * A device accepts a key set only if the root signature verifies, it has not expired by the device's clock, its version is not lower than the trusted one, an equal version is byte-identical, and it keeps every earlier revocation.
+  * A device installs a release only if the key named by the release's key id is in its trusted, unexpired set and not revoked. The accepted set is saved before use, so a restart keeps the version floor.
+  * The server applies the same checks to uploads, but devices do not rely on that: the tests serve revoked-key signatures and an old key set through a tampering proxy, and the devices refuse both.
 * **Device identity.** At first start, the agent generates an Ed25519 key pair and enrolls with a **single-use** bootstrap token issued through the admin API.
   * Every later request is signed over `method, path, timestamp, nonce, SHA-256(body)`.
   * The server rejects unknown devices, bad signatures, timestamps more than ±5 min off, and reused nonces.

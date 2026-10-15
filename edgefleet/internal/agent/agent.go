@@ -57,13 +57,17 @@ const MaxBootAttempts = 2
 
 // Config configures an agent.
 type Config struct {
-	Server         string
-	DeviceID       string
-	StateDir       string
-	EnrollToken    string
-	Labels         map[string]string
-	ReleaseKey     ed25519.PublicKey
-	InitialVersion string // version shipped in slot a at manufacturing
+	Server      string
+	DeviceID    string
+	StateDir    string
+	EnrollToken string
+	Labels      map[string]string
+	ReleaseKey  ed25519.PublicKey
+	// RootKey enables key-rotation mode: releases must be signed by a key in
+	// a root-signed key set (proto/keyset.go) instead of ReleaseKey.
+	RootKey        ed25519.PublicKey
+	Now            func() time.Time // clock for key-set expiry (default time.Now)
+	InitialVersion string           // version shipped in slot a at manufacturing
 	// Exec runs the app from the slot (real devices); otherwise the health
 	// outcome comes from the manifest's SimHealth (fleet simulation).
 	Exec         bool
@@ -104,6 +108,7 @@ type Agent struct {
 	appDone chan struct{}
 	mu      sync.Mutex
 	hbSec   int
+	trust   *proto.Trust
 }
 
 func (a *Agent) failed(v string) bool {
@@ -135,7 +140,25 @@ func New(cfg Config) (*Agent, error) {
 	if cfg.HealthWindow == 0 {
 		cfg.HealthWindow = 2 * time.Second
 	}
+	if cfg.Now == nil {
+		cfg.Now = time.Now
+	}
 	a := &Agent{cfg: cfg, state: "idle", hbSec: 30}
+	if cfg.RootKey != nil {
+		a.trust = &proto.Trust{Root: cfg.RootKey}
+		if b, err := os.ReadFile(filepath.Join(cfg.StateDir, "keyset.json")); err == nil {
+			var ks proto.SignedKeySet
+			if err := json.Unmarshal(b, &ks); err != nil {
+				return nil, fmt.Errorf("agent: keyset.json: %w", err)
+			}
+			// it was verified when accepted; re-check the signature (not the
+			// expiry: an expired set still sets the version floor)
+			if err := proto.VerifyKeySet(cfg.RootKey, &ks, time.Unix(0, 0)); err != nil {
+				return nil, fmt.Errorf("agent: keyset.json: %w", err)
+			}
+			a.trust.Current = &ks
+		}
+	}
 	if err := os.MkdirAll(filepath.Join(cfg.StateDir, "slots", "a"), 0o755); err != nil {
 		return nil, err
 	}
@@ -410,6 +433,12 @@ func (a *Agent) Beat() (time.Duration, error) {
 		a.hbSec = d.HeartbeatSec
 	}
 	a.mu.Unlock()
+	if err := a.acceptKeySet(d.KeySet); err != nil {
+		a.mu.Lock()
+		a.lastErr = err.Error()
+		a.mu.Unlock()
+		return a.interval(), err
+	}
 	if d.Version != "" && d.Version != hb.ActiveVersion && d.Manifest != nil {
 		if err := a.update(&d); err != nil {
 			a.mu.Lock()
@@ -439,7 +468,11 @@ func (a *Agent) update(d *proto.Desired) error {
 	if m.Version != d.Version {
 		return fmt.Errorf("%w: manifest version mismatch", ErrVerify)
 	}
-	if err := proto.VerifyManifest(a.cfg.ReleaseKey, m, d.Signature); err != nil {
+	if a.trust != nil {
+		if err := a.trust.VerifyRelease(m, d.Signature, d.KeyID, a.cfg.Now()); err != nil {
+			return fmt.Errorf("%w: %v", ErrVerify, err)
+		}
+	} else if err := proto.VerifyManifest(a.cfg.ReleaseKey, m, d.Signature); err != nil {
 		return fmt.Errorf("%w: %v", ErrVerify, err)
 	}
 	if a.failed(m.Version) {
@@ -477,6 +510,40 @@ func (a *Agent) update(d *proto.Desired) error {
 	}
 	a.hook("installed")
 	return a.trialLocked()
+}
+
+// acceptKeySet applies a key set from the server (key-rotation mode). A
+// rejected set (bad signature, expired, older version) is an error and the
+// trusted set stays as it was; it is saved before it is used.
+func (a *Agent) acceptKeySet(ks *proto.SignedKeySet) error {
+	if a.trust == nil || ks == nil {
+		return nil
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	prev := a.trust.Current
+	changed, err := a.trust.Accept(ks, a.cfg.Now())
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrVerify, err)
+	}
+	if changed {
+		if err := atomicWrite(filepath.Join(a.cfg.StateDir, "keyset.json"), proto.MustJSON(a.trust.Current), 0o644); err != nil {
+			a.trust.Current = prev
+			return err
+		}
+		a.hook("keyset-accepted")
+	}
+	return nil
+}
+
+// TrustedKeySetVersion is the version of the key set the device trusts (0 if none).
+func (a *Agent) TrustedKeySetVersion() uint64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.trust == nil || a.trust.Current == nil {
+		return 0
+	}
+	return a.trust.Current.KeySet.Version
 }
 
 func fileHash(p string) string {

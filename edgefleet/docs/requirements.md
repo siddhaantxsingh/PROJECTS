@@ -15,5 +15,8 @@
 | Observability | VERIFIED (basic) | `/metrics` (devices by version, rollout wave, heartbeats, auth failures) |
 | Admin CLI | VERIFIED | `fleetctl` used by e2e |
 | HA / multi-instance control plane | NOT IMPLEMENTED | — |
-| Delta updates, key rotation, TUF | NOT IMPLEMENTED | — |
+| Release-signing key rotation: root-signed key set with version and expiry; devices pin the root; expired, revoked, unknown keys and key-set rollback rejected | VERIFIED (2026-10-15) | `internal/proto/keyset_test.go` (rotation lifecycle, forgery, malformed sets); `internal/server/keyset_test.go` (server + agents, incl. a tampering control plane serving revoked-key signatures and a rolled-back key set; device-clock expiry; restart keeps the version floor); `e2e/TestKeyRotationWithRealBinaries` (fleetctl keyset/keyset-push, fleetd, fleet-agent). 7 of 7 hand mutations caught: [keyset_mutations.log](evidence/2026-10-15/keyset_mutations.log). Full run: [go_test_all.log](evidence/2026-10-15/go_test_all.log) |
+| TUF (roles, thresholds, root rotation, snapshot/timestamp metadata) | NOT IMPLEMENTED | the key set is a small subset; see docs/limitations.md |
+| Device-key rotation / revocation | NOT IMPLEMENTED | — |
+| Delta updates | NOT IMPLEMENTED | — |
 | CI | VERIFIED | `.github/workflows/edgefleet.yml` (run 38517425606 green) |

@@ -34,18 +34,29 @@ func main() {
 	state := flag.String("state", "fleet-agent", "state directory")
 	token := flag.String("token", "", "enrollment token (first start only)")
 	pubkey := flag.String("release-pubkey", "", "base64 Ed25519 release key")
+	rootPub := flag.String("root-pubkey", "", "key-rotation mode: pinned base64 Ed25519 root key (replaces -release-pubkey)")
 	initial := flag.String("initial-version", "1.0", "version installed in slot a")
 	execApp := flag.Bool("exec", false, "run the application from the active slot")
 	hw := flag.Duration("health-window", 2*time.Second, "time a new version must stay up")
 	hb := flag.Duration("heartbeat", 0, "override the server's heartbeat interval")
 	flag.Var(lb, "label", "k=v device label (repeatable)")
 	flag.Parse()
-	key, err := proto.DecodePublicKey(*pubkey)
-	if err != nil {
-		log.Fatal("-release-pubkey: ", err)
+	cfg := agent.Config{Server: *server, DeviceID: *id, StateDir: *state, EnrollToken: *token, Labels: lb,
+		InitialVersion: *initial, Exec: *execApp, HealthWindow: *hw, Heartbeat: *hb}
+	if *rootPub != "" {
+		root, err := proto.DecodePublicKey(*rootPub)
+		if err != nil {
+			log.Fatal("-root-pubkey: ", err)
+		}
+		cfg.RootKey = root
+	} else {
+		key, err := proto.DecodePublicKey(*pubkey)
+		if err != nil {
+			log.Fatal("-release-pubkey: ", err)
+		}
+		cfg.ReleaseKey = key
 	}
-	a, err := agent.New(agent.Config{Server: *server, DeviceID: *id, StateDir: *state, EnrollToken: *token, Labels: lb,
-		ReleaseKey: key, InitialVersion: *initial, Exec: *execApp, HealthWindow: *hw, Heartbeat: *hb})
+	a, err := agent.New(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

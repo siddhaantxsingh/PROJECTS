@@ -45,6 +45,7 @@ type Release struct {
 	Size      int64  `json:"size"`
 	SHA256    string `json:"sha256"`
 	Signature string `json:"signature"`
+	KeyID     string `json:"key_id,omitempty"` // release key id (key-rotation mode)
 	SimHealth string `json:"sim_health,omitempty"`
 	Path      string `json:"path"` // artifact file on the server
 	Created   int64  `json:"created"`
