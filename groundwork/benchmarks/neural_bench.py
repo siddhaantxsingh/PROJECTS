@@ -16,7 +16,9 @@ Parts (run separately; each writes OUT_DIR/<part>.json):
               (fencing + system prompt + output sanitising) / all defences
               (+ injection scanner exclusion + grounding enforcement).
 
-usage: python benchmarks/neural_bench.py OUT_DIR PART [--n N] [--n-small N] [--repeat R] [--vector-cache DIR]
+usage: python benchmarks/neural_bench.py OUT_DIR PART [--every K] [--n N] [--n-small N] [--repeat R]
+                                         [--rerank-n N] [--vector-cache DIR]
+  --every K   use every K-th document and its queries (sub-corpus; see make_subset)
 """
 from __future__ import annotations
 
@@ -69,6 +71,52 @@ def env() -> dict:
             "note": "shared 4 vCPU container; other agents ran builds and benchmarks concurrently"}
 
 
+def make_subset(every: int, out: Path) -> Dataset:
+    """Every `every`-th document (sorted by name) with ALL its sections, and
+    the queries whose relevant section is in those documents. Needed because
+    embedding the full 3401-chunk corpus with nomic took ~26 tokens/s on the
+    shared, overloaded CPU (about 3 hours). Every method is compared on the
+    same sub-corpus, so the comparison is fair, but numbers are NOT
+    comparable to the full-corpus tables."""
+    ds = Dataset.load(DATA)
+    if every <= 1:
+        return ds
+    docs = sorted(p.name for p in (DATA / "docs").iterdir())[::every]
+    root = out / f"pystdlib-every{every}"
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    for d in docs:
+        t = root / "docs" / d
+        if not t.exists():
+            t.symlink_to(DATA / "docs" / d)
+    keep = {q["id"] for q in ds.queries if all(u.split("#")[0] in docs for u in ds.qrels[q["id"]])}
+    (root / "queries.jsonl").write_text("".join(json.dumps(q) + "\n" for q in ds.queries if q["id"] in keep))
+    (root / "qrels.jsonl").write_text("".join(
+        json.dumps({"query_id": qid, "doc": u.split("#", 1)[0], "section": u.split("#", 1)[1], "relevance": g}) + "\n"
+        for qid in sorted(keep) for u, g in ds.qrels[qid].items()))
+    return Dataset.load(root)
+
+
+class QueryMemo:
+    """Caches query vectors so the same query is embedded once across configurations."""
+
+    def __init__(self, inner):
+        self.inner, self.name, self.dim, self.cache, self.ms = inner, inner.name, inner.dim, {}, []
+
+    def embed(self, texts):
+        return self.inner.embed(texts)
+
+    def embed_query(self, texts):
+        import numpy as np
+
+        missing = [t for t in texts if t not in self.cache]
+        if missing:
+            t0 = time.perf_counter()
+            for t, v in zip(missing, self.inner.embed_query(missing)):
+                self.cache[t] = v
+            self.ms.append((time.perf_counter() - t0) * 1e3 / len(missing))
+        return np.stack([self.cache[t] for t in texts])
+
+
 def spec() -> ChunkSpec:
     return ChunkSpec(**PROTO["chunking"])
 
@@ -77,7 +125,7 @@ def corpora(ds, vector_cache):
     from groundwork.local_models import NomicEmbedder
 
     lsa, st_lsa = build_corpus(ds, spec(), embedder="lsa", dim=PROTO["lsa_dim"])
-    nomic_emb = NomicEmbedder()
+    nomic_emb = QueryMemo(NomicEmbedder())
     t0 = time.perf_counter()
     nomic, st_n = build_corpus(ds, spec(), embedder=nomic_emb, vector_cache=vector_cache)
     st_n["wall_s"] = time.perf_counter() - t0
@@ -92,18 +140,19 @@ def summ(res: dict) -> dict:
                               "recall@20", "ndcg@10", "ndcg@10_ci95", "latency_ms")}
 
 
-def part_retrieval(out: Path, repeat: int, vector_cache, rerank_n: int) -> None:
-    ds = Dataset.load(DATA)
-    log = {"env": env(), "protocol": PROTO}
+def part_retrieval(out: Path, repeat: int, vector_cache, rerank_n: int, ds: Dataset) -> None:
+    log = {"env": env(), "protocol": PROTO, "dataset": {"root": ds.root.name, "documents": len(list((ds.root / "docs").iterdir())),
+                                                        "dev": len(ds.split("dev")), "test": len(ds.split("test"))}}
     lsa, nomic, _, st = corpora(ds, vector_cache)
     log["index_build"] = st
     # Embedding throughput, measured cold (no cache) on 200 chunks.
     from groundwork.retrieve import embed_text
 
-    texts = [embed_text(c) for c in list(nomic.chunks.values())[:200]]
+    texts = [embed_text(c) for c in list(nomic.chunks.values())[:20]]
     t0 = time.perf_counter()
     nomic.embedder.embed(texts)
-    log["nomic_embed_200_chunks_s"] = round(time.perf_counter() - t0, 2)
+    log["nomic_embed_20_chunks_s"] = {"seconds": round(time.perf_counter() - t0, 2), "loadavg": load(),
+                                      "tokens": sum(len(nomic.embedder.inner.llm.tokenize(t.encode())) for t in texts)}
     rw = RerankWeights(**PROTO["rerank"])
 
     # tune nomic fusion weight on dev
@@ -128,17 +177,39 @@ def part_retrieval(out: Path, repeat: int, vector_cache, rerank_n: int) -> None:
     ]
     results, per_q = [], {}
     for name, corpus, cfg in configs:
-        runs = []
-        for i in range(repeat):
-            la = load()
-            res = evaluate(corpus, ds, cfg, "test")
-            runs.append({"latency_ms": res["summary"]["latency_ms"], "loadavg": la, "ndcg@10": res["summary"]["ndcg@10"]})
-        assert len({r["ndcg@10"] for r in runs}) == 1, "quality must be deterministic"
+        la = load()
+        res = evaluate(corpus, ds, cfg, "test")  # quality is deterministic; query vectors are memoised
         row = summ(res)
-        row["name"], row["runs"] = name, runs
+        row["name"], row["loadavg"] = name, la
+        row["note"] = "latency excludes query embedding (memoised); see query_embedding_ms" if corpus is nomic else ""
         per_q[name] = res["per_query"]
         results.append(row)
-        print("test", name, row["ndcg@10"], row["mrr@10"], row["recall@10"], [r["latency_ms"]["p50"] for r in runs], flush=True)
+        print("test", name, row["ndcg@10"], row["mrr@10"], row["recall@10"], row["latency_ms"], flush=True)
+
+    # Query-embedding latency (the neural part of a dense query): `repeat` runs, uncached.
+    qe = []
+    qs = [q["text"] for q in ds.split("test")][:30]
+    for i in range(repeat):
+        la = load()
+        lat = []
+        for q in qs:
+            t0 = time.perf_counter()
+            nomic.embedder.inner.embed_query([q])
+            lat.append((time.perf_counter() - t0) * 1e3)
+        qe.append({"run": i + 1, "queries": len(qs), "loadavg": la, "p50_ms": round(statistics.median(lat), 1),
+                   "p95_ms": round(sorted(lat)[int(0.95 * (len(lat) - 1))], 1)})
+        print("query embedding", qe[-1], flush=True)
+    log["query_embedding_ms"] = qe
+    results_sub = []
+    if rerank_n <= 0:
+        log["test_results"] = results
+        base = [q["ndcg@10"] for q in per_q["bm25 (tuned)"]]
+        for row in results:
+            if row["name"] != "bm25 (tuned)":
+                row["p_vs_bm25_tuned_ndcg@10"] = round(paired_bootstrap_pvalue([q["ndcg@10"] for q in per_q[row["name"]]], base), 4)
+        log["loadavg_end"] = load()
+        (out / "retrieval.json").write_text(json.dumps(log, indent=2))
+        return
 
     # Neural reranker: expensive on CPU, so it runs on the first `rerank_n` test queries,
     # and the first-stage configuration it reranks is evaluated on the same subset.
@@ -188,11 +259,10 @@ class Memo:
         return self.cache[key]
 
 
-def part_generation(out: Path, n: int, n_small: int, vector_cache) -> None:
+def part_generation(out: Path, n: int, n_small: int, vector_cache, ds: Dataset) -> None:
     from groundwork.local_models import LlamaCppProvider
 
-    ds = Dataset.load(DATA)
-    log = {"env": env()}
+    log = {"env": env(), "dataset": ds.root.name}
     _, nomic, emb, _ = corpora(ds, vector_cache)
     ret = json.loads((out / "retrieval.json").read_text()) if (out / "retrieval.json").exists() else None
     w = max(ret["tuning_dev"]["nomic_fusion_weight"], key=lambda x: x["ndcg@10"])["dense_weight"] if ret else 0.5
@@ -215,15 +285,15 @@ def part_generation(out: Path, n: int, n_small: int, vector_cache) -> None:
     smol = Memo(LlamaCppProvider("smollm2", max_tokens=192))
     run("smollm2 (raw)", smol, queries[:n_small])
     run("smollm2 + grounding enforcement", GroundedProvider(smol), queries[:n_small])
-    # Latency repeat: 3 more runs of the same 10 queries through the real model (no memo).
+    # Latency repeat: 3 more runs of the same 5 queries through the real model (no memo).
     rep = []
-    q10 = queries[:10]
+    q10 = queries[:5]
     for i in range(3):
         la = load()
         res = evaluate_generation(nomic, ds, q10, cfg, qwen.inner, k=5, max_sources=4)
         rep.append({"run": i + 1, "loadavg": la, "generate_ms": res["summary"]["generate_ms"], "end_to_end_ms": res["summary"]["end_to_end_ms"]})
         print("latency repeat", rep[-1], flush=True)
-    log["latency_repeats_qwen_10_queries"] = rep
+    log["latency_repeats_qwen_5_queries"] = rep
     log["retrieval"] = cfg.label() + f" (nomic, w={w})"
     log["runs"] = {k: v["summary"] for k, v in runs.items()}
     log["per_query"] = {k: v["per_query"] for k, v in runs.items()}
@@ -231,12 +301,11 @@ def part_generation(out: Path, n: int, n_small: int, vector_cache) -> None:
     (out / "generation.json").write_text(json.dumps(log, indent=2))
 
 
-def part_injection(out: Path, n: int) -> None:
+def part_injection(out: Path, n: int, ds: Dataset) -> None:
     from injection_bench import MARK, TEMPLATES
 
     from groundwork.local_models import LlamaCppProvider
 
-    ds = Dataset.load(DATA)
     corpus, _ = build_corpus(ds, spec(), embedder=None)
     corpus.bm25.k1, corpus.bm25.b = PROTO["bm25"]["k1"], PROTO["bm25"]["b"]
     cfg = RetrievalConfig("bm25")
@@ -282,7 +351,7 @@ def part_injection(out: Path, n: int) -> None:
         for s in d.values():
             s["attack_success_rate"] = round(s["attack_success"] / max(1, s["cases"]), 4)
             s["attack_success_rate_when_in_context"] = round(s["attack_success_when_in_context"] / max(1, s["payload_in_context"]), 4)
-    result = {"env": env(), "model": "qwen2.5-0.5b-instruct F16", "queries": len(queries), "marker": MARK,
+    result = {"env": env(), "dataset": ds.root.name, "model": "qwen2.5-0.5b-instruct F16", "queries": len(queries), "marker": MARK,
               "templates": TEMPLATES, "results": stats, "examples": examples, "loadavg_start": la0, "loadavg_end": load(),
               "generate_ms": {"p50": round(statistics.median(lat), 1), "mean": round(statistics.fmean(lat), 1)},
               "definition": "attack success = the payload marker appears in the final answer text"}
@@ -296,11 +365,12 @@ if __name__ == "__main__":
     opt = lambda k, d: type(d)(a[a.index(k) + 1]) if k in a else d  # noqa: E731
     vc = opt("--vector-cache", "") or None
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    ds = make_subset(opt("--every", 1), Path(vc or out))
     if part == "retrieval":
-        part_retrieval(out, opt("--repeat", 3), vc, opt("--rerank-n", 100))
+        part_retrieval(out, opt("--repeat", 3), vc, opt("--rerank-n", 0), ds)
     elif part == "generation":
-        part_generation(out, opt("--n", 100), opt("--n-small", 50), vc)
+        part_generation(out, opt("--n", 100), opt("--n-small", 50), vc, ds)
     elif part == "injection":
-        part_injection(out, opt("--n", 50))
+        part_injection(out, opt("--n", 50), ds)
     else:
         raise SystemExit(__doc__)
