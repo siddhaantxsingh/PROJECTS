@@ -1,6 +1,8 @@
 """UVM agents: APB master, UART serial (RX driver, independent TX monitor),
 GPIO input driver. All drive right after a rising clock edge and sample in
 the read-only phase of a cycle."""
+import os
+
 import cocotb
 from cocotb.triggers import ReadOnly, RisingEdge
 from pyuvm import (ConfigDB, uvm_analysis_port, uvm_agent, uvm_driver, uvm_monitor, uvm_sequence_item,
@@ -18,25 +20,46 @@ class ApbItem(uvm_sequence_item):
 
 
 class ApbDriver(uvm_driver):
+    """APB requester. APB_DRV_BUG (environment) injects one protocol
+    violation per transfer, to show that the SVA protocol checks fire:
+    penable_idle, no_setup, abort_setup, drop_wait, addr_change, wdata_change.
+    Unset (the default) means a correct APB requester."""
+
+    BUGS = ("penable_idle", "no_setup", "abort_setup", "drop_wait", "addr_change", "wdata_change")
+
     def build_phase(self):
         self.dut = ConfigDB().get(self, "", "DUT")
+        self.bug = os.environ.get("APB_DRV_BUG", "")
+        assert self.bug in ("",) + self.BUGS, f"unknown APB_DRV_BUG {self.bug}"
 
     async def run_phase(self):
         d = self.dut
+        bug = self.bug
         d.psel.value = 0
         d.penable.value = 0
         while True:
             item = await self.seq_item_port.get_next_item()
             for _ in range(item.idle):
                 await RisingEdge(d.clk)
+            if bug == "penable_idle":  # PENABLE high without PSEL for one cycle
+                d.psel.value, d.penable.value = 0, 1
+                await RisingEdge(d.clk)
+            if bug == "abort_setup":  # a setup cycle not followed by an access cycle
+                d.psel.value, d.penable.value, d.pwrite.value, d.paddr.value = 1, 0, 0, item.addr
+                await RisingEdge(d.clk)
+                d.psel.value = 0
+                await RisingEdge(d.clk)
             # setup phase
             d.psel.value = 1
-            d.penable.value = 0
+            d.penable.value = int(bug == "no_setup")  # bug: skip the setup cycle
             d.pwrite.value = int(item.write)
             d.paddr.value = item.addr
             d.pwdata.value = item.data if item.write else 0
-            await RisingEdge(d.clk)
+            if bug != "no_setup":
+                await RisingEdge(d.clk)
             d.penable.value = 1
+            if bug == "wdata_change" and item.write:  # PWDATA changes between setup and access
+                d.pwdata.value = item.data ^ 1
             waits = 0
             while True:
                 await ReadOnly()
@@ -45,6 +68,12 @@ class ApbDriver(uvm_driver):
                     break
                 waits += 1
                 await RisingEdge(d.clk)
+                if bug == "drop_wait" and waits == 1:  # PENABLE drops during a wait state
+                    d.penable.value = 0
+                    await RisingEdge(d.clk)
+                    d.penable.value = 1
+                if bug == "addr_change" and waits == 1:  # PADDR changes during a wait state
+                    d.paddr.value = item.addr ^ 0x4
             item.wait_states = waits
             await RisingEdge(d.clk)  # the transfer completes on this edge
             d.psel.value = 0

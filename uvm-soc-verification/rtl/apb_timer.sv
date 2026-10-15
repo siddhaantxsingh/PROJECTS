@@ -22,7 +22,11 @@ module apb_timer (
     logic [15:0] presc, pcnt;
     logic [31:0] compare, count;
     wire fire = psel && penable;
+`ifdef BUG_APB_PREADY_SETUP
+    assign pready = psel;  // protocol bug for the SVA demo: PREADY already in the setup cycle
+`else
     assign pready = fire;
+`endif
     assign pslverr = fire && !(paddr[1:0] == 2'b00 && paddr <= 8'h10);
 `ifdef BUG_TIMER_PRESC
     wire tick = enable && pcnt >= presc && pcnt != 0;

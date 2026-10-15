@@ -24,6 +24,9 @@ class LockstepScoreboard(uvm_component):
         self.cycles = 0
         self.max_errors = 10
         self.failed = Event()  # set on the first mismatch so the test can stop early
+        # LOCKSTEP=0 turns the comparison off. Only used to show that another
+        # checker (RAL, SVA) catches a bug on its own; never in normal runs.
+        self.enabled = os.environ.get("LOCKSTEP", "1") != "0"
 
     async def run_phase(self):
         d, m = self.dut, self.model
@@ -32,7 +35,7 @@ class LockstepScoreboard(uvm_component):
             await ReadOnly()
             i = Inp(int(d.rst_n.value), int(d.psel.value), int(d.penable.value), int(d.pwrite.value), int(d.paddr.value),
                     int(d.pwdata.value), int(d.uart_rx.value), int(d.gpio_in.value))
-            if i.rst_n:
+            if i.rst_n and self.enabled:
                 exp = m.outputs(i)
                 for k in OUTPUTS:
                     got = int(getattr(d, k).value)
@@ -194,6 +197,40 @@ class Coverage(uvm_component):
                 json.dump(r, f, indent=1)
 
 
+class SvaChecker(uvm_component):
+    """Reads the failure counters of the bound SVA modules (sva/soc_sva.sv).
+    Any assertion failure fails the test, unless SVA_FATAL=0 (used by the
+    bug-injection runs to tell testbench detection and SVA detection apart)."""
+
+    PATHS = ("u_sva", "u_uart.u_sva", "u_tim.u_sva", "u_gpio.u_sva")
+
+    def build_phase(self):
+        self.dut = ConfigDB().get(self, "", "DUT")
+        self.fatal = os.environ.get("SVA_FATAL", "1") != "0"
+
+    def counts(self):
+        out = {}
+        for p in self.PATHS:
+            h = self.dut
+            try:
+                for part in p.split("."):
+                    h = getattr(h, part)
+                out[p] = int(h.fails.value)
+            except AttributeError:
+                return None  # built with SVA=0
+        return out
+
+    def check_phase(self):
+        c = self.counts()
+        if c is None:
+            self.logger.info("SVA not compiled in (SVA=0)")
+            return
+        total = sum(c.values())
+        self.logger.info(f"SVA failures: {total} {c if total else ''}")
+        if self.fatal:
+            assert total == 0, f"{total} SVA assertion failures {c} (see SVA_FAIL lines in the log)"
+
+
 class SocEnv(uvm_env):
     def build_phase(self):
         self.apb = ApbAgent("apb", self)
@@ -202,6 +239,7 @@ class SocEnv(uvm_env):
         self.sb = LockstepScoreboard("sb", self)
         self.txchk = UartTxChecker("txchk", self)
         self.cov = Coverage("cov", self)
+        self.sva = SvaChecker("sva", self)
         self.cov_apb = _Sub("cov_apb", self, lambda t: self.cov.apb(t))
         self.tx_sub = _Sub("tx_sub", self, lambda t: self.txchk.write(t))
 

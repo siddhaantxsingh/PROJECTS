@@ -17,6 +17,15 @@ SCALE = float(os.environ.get("TEST_SCALE", "1"))
 LIMIT_US = 3000  # simulated time per test at scale 1
 
 
+ONLY_TESTS = [t for t in os.environ.get("ONLY_TESTS", "").split(",") if t]
+
+
+def utest(cls):
+    """pyuvm.test(), skipping tests not named in ONLY_TESTS (when set).
+    cocotb 1.9 cannot select pyuvm tests by class name through TESTCASE."""
+    return pyuvm.test(skip=bool(ONLY_TESTS) and cls.__name__ not in ONLY_TESTS)(cls)
+
+
 def n(x):
     return max(1, int(x * SCALE))
 
@@ -50,6 +59,7 @@ class BaseTest(uvm_test):
             self.env.sb.errors.append(f"scenario did not finish within {LIMIT_US * SCALE:.0f} us of simulated time")
         elif not task.done():
             task.kill()
+            await ClockCycles(d.clk, 3)  # let the bound SVA sample the failing cycle too
         else:
             await ClockCycles(d.clk, 20)
         self.drop_objection()
@@ -58,43 +68,43 @@ class BaseTest(uvm_test):
         raise NotImplementedError
 
 
-@pyuvm.test()
+@utest
 class RegisterTest(BaseTest):
     async def scenario(self):
         await S.register_scenario(self.bus, self.rng, n(300))
 
 
-@pyuvm.test()
+@utest
 class UartTxTest(BaseTest):
     async def scenario(self):
         await S.uart_tx_scenario(self.bus, self.rng, n(4), 12)
 
 
-@pyuvm.test()
+@utest
 class UartRxTest(BaseTest):
     async def scenario(self):
         await S.uart_rx_scenario(self.bus, self.rng, n(3), 10)
 
 
-@pyuvm.test()
+@utest
 class TimerTest(BaseTest):
     async def scenario(self):
         await S.timer_scenario(self.bus, self.rng, n(8))
 
 
-@pyuvm.test()
+@utest
 class GpioTest(BaseTest):
     async def scenario(self):
         await S.gpio_scenario(self.bus, self.rng, n(60))
 
 
-@pyuvm.test()
+@utest
 class IntcTest(BaseTest):
     async def scenario(self):
         await S.intc_directed(self.bus, self.rng)
 
 
-@pyuvm.test()
+@utest
 class StressTest(BaseTest):
     """Everything at once: UART TX and RX, timer, GPIO and the interrupt
     controller compete for the bus."""
@@ -115,3 +125,36 @@ class StressTest(BaseTest):
         baud, parity = line
         for _ in range(n(6)):
             await self.bus.frame(S.UartFrame(byte=self.rng.randrange(256), baud=baud, parity=parity, idle_bits=self.rng.randint(0, 2)))
+
+
+class _RalBase(BaseTest):
+    async def ral(self):
+        import ral
+        chk = ral.RalChecker(ral.build_model(self.env.apb.seqr), self.dut, self.logger)
+        return chk
+
+    def finish(self, chk, what):
+        self.logger.info(f"RAL {what}: {chk.checked} register checks, {len(chk.errors)} mismatches")
+        assert not chk.errors, f"RAL {what}: {len(chk.errors)} mismatches; first: {chk.errors[0]}"
+
+
+@utest
+class RalRegisterTest(_RalBase):
+    """pyuvm register model: reset values, bit-bash, frontdoor vs backdoor."""
+
+    async def scenario(self):
+        chk = await self.ral()
+        await chk.reset_check()
+        await chk.bit_bash()
+        await chk.backdoor_check(self.rng)
+        self.finish(chk, "reset + bit-bash + backdoor")
+
+
+@utest
+class RalW1cTest(_RalBase):
+    """pyuvm register model: per-bit W1C of hardware-set sticky flags."""
+
+    async def scenario(self):
+        chk = await self.ral()
+        await chk.w1c_check(self.bus, self.rng)
+        self.finish(chk, "W1C")

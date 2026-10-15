@@ -65,6 +65,11 @@ module periph_soc (
     always_comb begin
         prdata = rd_u | rd_t | rd_g | rd_i;  // unselected slaves drive 0
         pready = s_uart ? rdy_u : s_tim ? rdy_t : s_gpio ? rdy_g : (psel && penable);
+`ifdef BUG_APB_SLVERR_SETUP
+        // protocol bug for the SVA demo: unmapped accesses flag PSLVERR already in the setup cycle
+        pslverr = s_uart ? err_u : s_tim ? err_t : s_gpio ? err_g : s_intc ? err_i : s_none;
+`else
         pslverr = s_uart ? err_u : s_tim ? err_t : s_gpio ? err_g : s_intc ? err_i : (s_none && penable);
+`endif
     end
 endmodule
