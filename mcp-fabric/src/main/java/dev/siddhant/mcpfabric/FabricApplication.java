@@ -1,6 +1,11 @@
 package dev.siddhant.mcpfabric;
 
+import dev.siddhant.mcpfabric.approval.Approvals;
 import dev.siddhant.mcpfabric.audit.AuditLog;
+import dev.siddhant.mcpfabric.auth.Authenticator;
+import dev.siddhant.mcpfabric.gateway.RequestSizeFilter;
+import dev.siddhant.mcpfabric.guard.ToolGuard;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import dev.siddhant.mcpfabric.gateway.Gateway;
 import dev.siddhant.mcpfabric.policy.Policy;
 import dev.siddhant.mcpfabric.upstream.CircuitBreaker;
@@ -34,7 +39,7 @@ public class FabricApplication {
             Duration t = c.timeout() == null ? Duration.ofSeconds(30) : c.timeout();
             var cb = new CircuitBreaker(p.breaker().threshold(), p.breaker().cooldown(), Clock.systemUTC());
             return switch (c.type()) {
-                case "stdio" -> new StdioUpstream(c.name(), c.command(), c.env() == null ? Map.of() : c.env(), t, cb);
+                case "stdio" -> new StdioUpstream(c.name(), c.command(), c.env() == null ? Map.of() : c.env(), Boolean.TRUE.equals(c.inheritEnv()), t, cb);
                 case "http" -> new HttpUpstream(c.name(), URI.create(c.url()), c.headers() == null ? Map.of() : c.headers(), t, cb);
                 default -> throw new IllegalArgumentException("unknown upstream type " + c.type());
             };
@@ -47,8 +52,29 @@ public class FabricApplication {
     }
 
     @Bean
-    Gateway gateway(List<Upstream> ups, FabricProperties p, AuditLog audit, MeterRegistry metrics) {
-        var g = new Gateway(ups, new Policy(p.clients(), Clock.systemUTC()), audit, metrics, p.pageSize());
+    Policy policy(FabricProperties p) {
+        return new Policy(p.clients(), p.auth().tenants(), Clock.systemUTC());
+    }
+
+    @Bean
+    Authenticator authenticator(FabricProperties p, Policy policy, MeterRegistry metrics) {
+        return new Authenticator(p, policy, metrics);
+    }
+
+    @Bean
+    FilterRegistrationBean<RequestSizeFilter> requestSizeFilter(FabricProperties p) {
+        var b = new FilterRegistrationBean<>(new RequestSizeFilter(p.maxRequestBytes()));
+        b.setOrder(Integer.MIN_VALUE + 10);
+        return b;
+    }
+
+    @Bean
+    Gateway gateway(List<Upstream> ups, FabricProperties p, Policy policy, AuditLog audit, MeterRegistry metrics) {
+        var approvals = new Approvals(p.approval().requiredFor().stream().map(Policy::glob).toList(), p.approval().timeout(), audit, Clock.systemUTC());
+        var guard = new ToolGuard(audit, p.toolGuard().untrustedAction(), p.toolGuard().maxDescriptionLength(), p.toolGuard().pinsFile());
+        var configs = new java.util.HashMap<String, FabricProperties.UpstreamConfig>();
+        p.upstreams().forEach(c -> configs.put(c.name(), c));
+        var g = new Gateway(ups, policy, audit, metrics, p.pageSize(), approvals, guard, configs);
         ups.forEach(Upstream::start);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> ups.forEach(Upstream::close)));
         return g;

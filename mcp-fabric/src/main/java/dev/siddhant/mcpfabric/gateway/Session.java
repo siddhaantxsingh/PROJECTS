@@ -14,7 +14,8 @@ public class Session {
     }
 
     public final String id;
-    public final Client client;
+    /** Refreshed on every request from that request's token (same principal; scopes may differ). */
+    public volatile Client client;
     public final String protocolVersion;
     public volatile boolean initialized;
     public volatile long lastSeen = System.currentTimeMillis();

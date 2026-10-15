@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.NullNode;
 import dev.siddhant.mcpfabric.FabricProperties;
+import dev.siddhant.mcpfabric.auth.Authenticator;
 import dev.siddhant.mcpfabric.policy.Policy;
 import java.time.Duration;
 import java.util.Map;
@@ -27,24 +28,31 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * POST /mcp   one JSON-RPC message; requests get a JSON reply, notifications 202
  * GET  /mcp   server-sent events for this session (list_changed notifications)
  * DELETE /mcp end the session
- * Every call needs `Authorization: Bearer <client key>`; after initialize,
+ * Every call needs `Authorization: Bearer <access token>` (a JWT in OAuth
+ * mode, a shared key in static dev mode); after initialize,
  * the `Mcp-Session-Id` it returned, which must belong to the same client.
  */
 @RestController
 public class McpController {
     private static final ObjectMapper JSON = new ObjectMapper();
     private final Gateway gw;
+    private final Authenticator authn;
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
     private final Duration idle;
 
-    public McpController(Gateway gw, FabricProperties props) {
+    public McpController(Gateway gw, FabricProperties props, Authenticator authn) {
         this.gw = gw;
+        this.authn = authn;
         this.idle = props.sessionIdleTimeout();
     }
 
-    private Optional<Policy.Client> auth(String header) {
-        if (header == null || !header.startsWith("Bearer ")) return Optional.empty();
-        return gw.policy().authenticate(header.substring(7).trim());
+    /** 401/403 with the WWW-Authenticate challenge (resource_metadata in OAuth mode). */
+    static <T> ResponseEntity<T> challenge(Authenticator.Fail f, T body) {
+        return ResponseEntity.status(f.status()).header("WWW-Authenticate", f.challenge()).contentType(MediaType.APPLICATION_JSON).body(body);
+    }
+
+    private static boolean sameCaller(Session s, Policy.Client c) {
+        return s.client.principal().equals(c.principal());
     }
 
     private static ResponseEntity<JsonNode> rpcError(HttpStatus st, JsonNode id, int code, String msg) {
@@ -56,9 +64,12 @@ public class McpController {
                                          @RequestHeader(value = "Mcp-Session-Id", required = false) String sid,
                                          @RequestHeader(value = "MCP-Protocol-Version", required = false) String version,
                                          @RequestBody JsonNode msg) {
-        var client = auth(authz);
         JsonNode id = msg.get("id");
-        if (client.isEmpty()) return rpcError(HttpStatus.UNAUTHORIZED, id, Gateway.FORBIDDEN, "missing or invalid bearer token");
+        var result0 = authn.mcp(authz);
+        if (result0 instanceof Authenticator.Fail f) {
+            return challenge(f, (JsonNode) Gateway.error(id == null ? NullNode.instance : id, Gateway.FORBIDDEN, f.message(), null));
+        }
+        var client = Optional.of(((Authenticator.Ok) result0).client());
         if (!msg.isObject() || !"2.0".equals(msg.path("jsonrpc").asText()) || !msg.hasNonNull("method") && !msg.has("result") && !msg.has("error")) {
             return rpcError(HttpStatus.BAD_REQUEST, id, -32600, "invalid JSON-RPC message (batches are not supported)");
         }
@@ -78,7 +89,8 @@ public class McpController {
         }
         if (sid == null) return rpcError(HttpStatus.BAD_REQUEST, id, -32600, "missing Mcp-Session-Id");
         Session s = sessions.get(sid);
-        if (s == null || !s.client.id().equals(client.get().id())) return rpcError(HttpStatus.NOT_FOUND, id, -32600, "unknown session");
+        if (s == null || !sameCaller(s, client.get())) return rpcError(HttpStatus.NOT_FOUND, id, -32600, "unknown session");
+        s.client = client.get();
         s.lastSeen = System.currentTimeMillis();
         if (method.equals("tools/call") && id != null && !gw.policy().admit(s.client)) {
             gw.auditRejected(s, msg.path("params").path("name").asText(""), "rate_limited");
@@ -92,10 +104,11 @@ public class McpController {
     @GetMapping(value = "/mcp", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Object stream(@RequestHeader(value = "Authorization", required = false) String authz,
                          @RequestHeader(value = "Mcp-Session-Id", required = false) String sid) {
-        var client = auth(authz);
-        if (client.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        var r = authn.mcp(authz);
+        if (r instanceof Authenticator.Fail f) return challenge(f, null);
+        var client = Optional.of(((Authenticator.Ok) r).client());
         Session s = sid == null ? null : sessions.get(sid);
-        if (s == null || !s.client.id().equals(client.get().id())) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        if (s == null || !sameCaller(s, client.get())) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         SseEmitter e = new SseEmitter(0L);
         s.streams.add(e);
         e.onCompletion(() -> s.streams.remove(e));
@@ -112,10 +125,11 @@ public class McpController {
     @DeleteMapping("/mcp")
     public ResponseEntity<Void> delete(@RequestHeader(value = "Authorization", required = false) String authz,
                                        @RequestHeader(value = "Mcp-Session-Id", required = false) String sid) {
-        var client = auth(authz);
-        if (client.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        var r = authn.mcp(authz);
+        if (r instanceof Authenticator.Fail f) return challenge(f, null);
+        var client = Optional.of(((Authenticator.Ok) r).client());
         Session s = sid == null ? null : sessions.get(sid);
-        if (s == null || !s.client.id().equals(client.get().id())) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        if (s == null || !sameCaller(s, client.get())) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         end(s);
         return ResponseEntity.noContent().build();
     }

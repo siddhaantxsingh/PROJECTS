@@ -57,6 +57,7 @@ class BenchmarkTest {
         String ad = System.getProperty("bench.auditDir");
         Path dir = ad == null ? Files.createTempDirectory("bench") : Files.createTempDirectory(Path.of(ad), "bench");
         r.add("fabric.audit-file", () -> dir.resolve("audit.jsonl").toString());
+        r.add("fabric.auth.mode", () -> "static");
     }
 
     static double pct(double[] v, double p) {

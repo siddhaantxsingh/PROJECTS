@@ -22,10 +22,24 @@ public class StdioUpstream extends Upstream {
     private volatile boolean closed;
     private final Object writeLock = new Object();
 
+    /** Variables passed to a child when the gateway's environment is not inherited. */
+    public static final List<String> ENV_ALLOWLIST = List.of("PATH", "HOME", "LANG", "LC_ALL", "TZ", "TMPDIR", "USER", "JAVA_HOME", "SYSTEMROOT", "WINDIR");
+    private final boolean inheritEnv;
+
     public StdioUpstream(String name, List<String> command, Map<String, String> env, Duration timeout, CircuitBreaker breaker) {
+        this(name, command, env, false, timeout, breaker);
+    }
+
+    /**
+     * inheritEnv=false (the default) gives the child only ENV_ALLOWLIST plus its
+     * configured `env`, so credentials meant for the gateway or other upstreams
+     * do not leak into it.
+     */
+    public StdioUpstream(String name, List<String> command, Map<String, String> env, boolean inheritEnv, Duration timeout, CircuitBreaker breaker) {
         super(name, timeout, breaker);
         this.command = command;
         this.env = env;
+        this.inheritEnv = inheritEnv;
     }
 
     @Override
@@ -38,6 +52,7 @@ public class StdioUpstream extends Upstream {
         while (!closed) {
             try {
                 var pb = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.INHERIT);
+                if (!inheritEnv) pb.environment().keySet().retainAll(ENV_ALLOWLIST);
                 pb.environment().putAll(env);
                 proc = pb.start();
                 stdin = proc.getOutputStream();

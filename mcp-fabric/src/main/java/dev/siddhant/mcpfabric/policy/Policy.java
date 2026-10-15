@@ -17,8 +17,24 @@ import java.util.regex.Pattern;
  * tool names; deny wins) and per-client token-bucket rate limits.
  */
 public class Policy {
-    public record Client(String id, List<Pattern> allow, List<Pattern> deny, double perSecond, double burst) {
+    /**
+     * An authenticated caller. `id` keys the rate-limit bucket; `subject` is the
+     * end user (or the static client id); `servers` restricts the upstreams the
+     * token's scopes grant (null = no restriction, static mode).
+     */
+    public record Client(String id, String subject, List<Pattern> allow, List<Pattern> deny, double perSecond, double burst,
+                         java.util.Set<String> servers) {
+        public Client(String id, List<Pattern> allow, List<Pattern> deny, double perSecond, double burst) {
+            this(id, id, allow, deny, perSecond, burst, null);
+        }
+
+        /** Identity a session is bound to. */
+        public String principal() {
+            return id + "|" + subject;
+        }
     }
+
+    private final Map<String, Client> tenants = new ConcurrentHashMap<>();
 
     private final Map<String, byte[]> digests = new ConcurrentHashMap<>();
     private final Map<String, Client> clients = new ConcurrentHashMap<>();
@@ -26,7 +42,18 @@ public class Policy {
     private final Clock clock;
 
     public Policy(List<ClientConfig> cfg, Clock clock) {
+        this(cfg, List.of(), clock);
+    }
+
+    public Policy(List<ClientConfig> cfg, List<dev.siddhant.mcpfabric.FabricProperties.TenantConfig> tenantCfg, Clock clock) {
         this.clock = clock;
+        for (var t : tenantCfg) {
+            var allow = (t.allow() == null ? List.of("*") : t.allow()).stream().map(Policy::glob).toList();
+            var deny = (t.deny() == null ? List.<String>of() : t.deny()).stream().map(Policy::glob).toList();
+            int rpm = t.ratePerMinute() == null ? 600 : t.ratePerMinute();
+            int burst = t.burst() == null ? Math.max(1, rpm / 10) : t.burst();
+            tenants.put(t.name(), new Client(t.name(), t.name(), allow, deny, rpm / 60.0, burst, null));
+        }
         for (ClientConfig c : cfg) {
             var allow = (c.allow() == null ? List.of("*") : c.allow()).stream().map(Policy::glob).toList();
             var deny = (c.deny() == null ? List.<String>of() : c.deny()).stream().map(Policy::glob).toList();
@@ -37,7 +64,7 @@ public class Policy {
         }
     }
 
-    static Pattern glob(String g) {
+    public static Pattern glob(String g) {
         StringBuilder r = new StringBuilder();
         for (char ch : g.toCharArray()) r.append(ch == '*' ? ".*" : ch == '?' ? "." : Pattern.quote(String.valueOf(ch)));
         return Pattern.compile(r.toString());
@@ -62,8 +89,22 @@ public class Policy {
         return Optional.ofNullable(found);
     }
 
+    /**
+     * The client for a validated access token: the tenant's policy, narrowed to
+     * the upstreams the token's scopes grant. Empty if the tenant is unknown.
+     */
+    public Optional<Client> forToken(String tenant, String clientId, String subject, java.util.Set<String> servers) {
+        Client t = tenant == null ? null : tenants.get(tenant);
+        if (t == null) return Optional.empty();
+        return Optional.of(new Client(tenant + "/" + clientId, subject, t.allow(), t.deny(), t.perSecond(), t.burst(), servers));
+    }
+
     public boolean allowed(Client c, String tool) {
         if (c.deny().stream().anyMatch(p -> p.matcher(tool).matches())) return false;
+        if (c.servers() != null && !c.servers().contains("*")) {
+            int i = tool.indexOf("__");
+            if (i <= 0 || !c.servers().contains(tool.substring(0, i))) return false;
+        }
         return c.allow().stream().anyMatch(p -> p.matcher(tool).matches());
     }
 

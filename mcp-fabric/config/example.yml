@@ -1,5 +1,8 @@
 # java -jar target/mcp-fabric-0.1.0.jar --spring.config.additional-location=config/example.yml
+# Static shared tokens: DEVELOPMENT ONLY. For production use OAuth (config/oauth-example.yml).
 fabric:
+  auth:
+    mode: static
   audit-file: data/audit.jsonl
   session-idle-timeout: 30m
   page-size: 50

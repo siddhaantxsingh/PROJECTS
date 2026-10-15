@@ -1,0 +1,54 @@
+# java -jar target/mcp-fabric-0.1.0.jar --spring.config.additional-location=config/oauth-example.yml
+# OAuth 2.1 resource-server mode (the default). See docs/OWNER_ACTIONS.md for Keycloak / Auth0 setup.
+server:
+  port: 8443
+  ssl:                              # TLS; see docs/OWNER_ACTIONS.md for creating the keystore
+    enabled: true
+    key-store: data/fabric-tls.p12
+    key-store-type: PKCS12
+    key-store-password: ${FABRIC_TLS_PASSWORD}
+    enabled-protocols: TLSv1.3,TLSv1.2
+fabric:
+  audit-file: data/audit.jsonl
+  max-request-bytes: 1048576
+  auth:
+    mode: oauth
+    issuer: https://idp.example.com/realms/mcp           # must equal the token's iss exactly
+    jwks-uri: https://idp.example.com/realms/mcp/protocol/openid-connect/certs
+    resource: https://mcp.example.com/mcp                 # tokens must carry this in aud (RFC 8707 resource indicator)
+    algorithms: [RS256, ES256]                            # asymmetric only; none and HS* are refused
+    clock-skew: 30s
+    required-scope: mcp:tools                             # needed for /mcp
+    admin-scope: mcp:admin                                # needed for /admin/*
+    server-scope-prefix: "mcp:server:"                    # mcp:server:files grants the files upstream; mcp:server:* all
+    tenant-claim: tenant
+    jwks-cache-ttl: 5m
+    jwks-min-refresh-interval: 30s
+    tenants:
+      - name: acme
+        allow: ["*"]
+        deny: ["*__crash"]
+        rate-per-minute: 600
+        burst: 60
+  approval:
+    required-for: ["files__write*", "*__delete*"]
+    timeout: 5m
+  tool-guard:
+    untrusted-action: redact
+    pins-file: data/tool-pins.json
+  upstreams:
+    - name: files
+      type: stdio
+      command: [java, -cp, target/classes, dev.siddhant.mcpfabric.demo.DemoServer, --name, files]
+      env:
+        FILES_TOKEN: ${FILES_UPSTREAM_TOKEN}              # injected from the gateway's environment, never from the client
+      path-arguments: [path]
+      path-roots: [/srv/data]
+      timeout: 30s
+    - name: search
+      type: http
+      url: https://search.internal.example.com/mcp
+      trusted: true
+      headers:
+        Authorization: Bearer ${SEARCH_UPSTREAM_TOKEN}
+      timeout: 10s

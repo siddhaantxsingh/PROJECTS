@@ -94,6 +94,7 @@ class FabricIntegrationTest {
         r.add("fabric.clients[2].burst", () -> "3");
         r.add("fabric.admin-key-sha256", () -> Policy.sha256Hex(ADMIN));
         r.add("fabric.audit-file", audit::toString);
+        r.add("fabric.auth.mode", () -> "static");
         r.add("fabric.page-size", () -> "4");
         r.add("fabric.breaker.threshold", () -> "2");
         r.add("fabric.breaker.cooldown", () -> "1500ms");

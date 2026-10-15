@@ -99,5 +99,20 @@ class ExampleConfigTest {
         org.assertj.core.api.Assertions.assertThat(policy.allowed(ide, "files__echo")).isTrue();
         org.assertj.core.api.Assertions.assertThat(policy.allowed(ci, "files__echo")).isFalse();
         org.assertj.core.api.Assertions.assertThat(Policy.sha256Hex("change-me-admin")).isEqualTo(p.adminKeySha256());
+        org.assertj.core.api.Assertions.assertThat(p.auth().mode()).isEqualTo("static");
+    }
+
+    @org.junit.jupiter.api.Test
+    void oauthExampleConfigBindsAndBuildsAVerifier() throws Exception {
+        var sources = new org.springframework.boot.env.YamlPropertySourceLoader()
+                .load("oauth", new org.springframework.core.io.FileSystemResource("config/oauth-example.yml"));
+        var env = new org.springframework.core.env.StandardEnvironment();
+        sources.forEach(env.getPropertySources()::addLast);
+        var p = org.springframework.boot.context.properties.bind.Binder.get(env).bind("fabric", FabricProperties.class).get();
+        org.assertj.core.api.Assertions.assertThat(p.auth().oauth()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(p.auth().tenants()).isNotEmpty();
+        var policy = new Policy(p.clients(), p.auth().tenants(), java.time.Clock.systemUTC());
+        var a = new dev.siddhant.mcpfabric.auth.Authenticator(p, policy, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+        org.assertj.core.api.Assertions.assertThat(a.metadataUrl()).isEqualTo("https://mcp.example.com/.well-known/oauth-protected-resource/mcp");
     }
 }

@@ -1,0 +1,160 @@
+ 13:10:25 up 15 min,  0 user,  load average: 11.18, 9.76, 5.77
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=41535 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< dev.siddhant:mcp-fabric >-----------------------
+[INFO] Building mcp-fabric 0.1.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ mcp-fabric ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ mcp-fabric ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ mcp-fabric ---
+[INFO] skip non existing resourceDirectory /home/user/PROJECTS/mcp-fabric/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ mcp-fabric ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 7 source files with javac [debug parameters release 21] to target/test-classes
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ mcp-fabric ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=41535 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+[INFO] Running dev.siddhant.mcpfabric.FabricIntegrationTest
+13:10:39.393 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [dev.siddhant.mcpfabric.FabricIntegrationTest]: FabricIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+13:10:39.700 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration dev.siddhant.mcpfabric.FabricApplication for test class dev.siddhant.mcpfabric.FabricIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.5)
+
+2026-10-15T13:10:42.239Z  INFO 15925 --- [           main] d.s.mcpfabric.FabricIntegrationTest      : Starting FabricIntegrationTest using Java 21.0.12.1 with PID 15925 (started by root in /home/user/PROJECTS/mcp-fabric)
+2026-10-15T13:10:42.241Z  INFO 15925 --- [           main] d.s.mcpfabric.FabricIntegrationTest      : No active profile set, falling back to 1 default profile: "default"
+2026-10-15T13:10:46.505Z  INFO 15925 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2026-10-15T13:10:46.532Z  INFO 15925 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-15T13:10:46.534Z  INFO 15925 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-10-15T13:10:46.639Z  INFO 15925 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-15T13:10:46.641Z  INFO 15925 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4326 ms
+2026-10-15T13:10:48.717Z  WARN 15925 --- [           main] d.siddhant.mcpfabric.auth.Authenticator  : fabric.auth.mode=static: shared bearer tokens, for development only; use oauth in production
+2026-10-15T13:10:50.110Z  INFO 15925 --- [      http-beta] d.s.mcpfabric.upstream.HttpUpstream      : beta: ready (7 tools, 1 resources, 1 prompts)
+2026-10-15T13:10:50.114Z  INFO 15925 --- [    stdio-alpha] d.s.mcpfabric.upstream.StdioUpstream     : alpha: ready (7 tools, 1 resources, 1 prompts)
+2026-10-15T13:10:50.518Z  INFO 15925 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+2026-10-15T13:10:50.719Z  INFO 15925 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 34207 (http) with context path '/'
+2026-10-15T13:10:50.741Z  INFO 15925 --- [           main] d.s.mcpfabric.FabricIntegrationTest      : Started FabricIntegrationTest in 10.747 seconds (process running for 12.835)
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.19/byte-buddy-agent-1.14.19.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-10-15T13:10:52.932Z  INFO 15925 --- [omcat-handler-0] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-15T13:10:52.932Z  INFO 15925 --- [omcat-handler-0] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-15T13:10:52.936Z  INFO 15925 --- [omcat-handler-0] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-10-15T13:11:01.092Z  WARN 15925 --- [    stdio-alpha] d.s.mcpfabric.upstream.StdioUpstream     : alpha: process exited with status 3; restarting
+2026-10-15T13:11:02.981Z  INFO 15925 --- [    stdio-alpha] d.s.mcpfabric.upstream.StdioUpstream     : alpha: ready (7 tools, 1 resources, 1 prompts)
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 30.13 s -- in dev.siddhant.mcpfabric.FabricIntegrationTest
+[INFO] Running dev.siddhant.mcpfabric.UnitTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in dev.siddhant.mcpfabric.UnitTests
+[INFO] Running dev.siddhant.mcpfabric.SecurityUnitTests
+2026-10-15T13:11:09.414Z  WARN 15925 --- [           main] dev.siddhant.mcpfabric.guard.ToolGuard   : tool u__t changed after it was pinned (pinned 23857c96022a97def7a5b50fb0afc8d17cbac36b82a96113302ba1a756ddb20e, now 16484092333ec3a659df2c215840f408de8a3a849b65d5025453dfaa0b4ecf3d); quarantined
+2026-10-15T13:11:09.438Z  WARN 15925 --- [           main] dev.siddhant.mcpfabric.guard.ToolGuard   : tool u__t metadata flagged [conceal_from_user]: FLAGGED
+2026-10-15T13:11:09.464Z  WARN 15925 --- [           main] dev.siddhant.mcpfabric.guard.ToolGuard   : tool v__t metadata flagged [conceal_from_user]: REDACTED
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.178 s -- in dev.siddhant.mcpfabric.SecurityUnitTests
+[INFO] Running dev.siddhant.mcpfabric.TlsTest
+2026-10-15T13:11:09.499Z  INFO 15925 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [dev.siddhant.mcpfabric.TlsTest]: TlsTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-15T13:11:09.623Z  INFO 15925 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration dev.siddhant.mcpfabric.FabricApplication for test class dev.siddhant.mcpfabric.TlsTest
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=41535 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.5)
+
+Generating 256 bit EC (secp256r1) key pair and self-signed certificate (SHA384withECDSA) with a validity of 2 days
+	for: CN=localhost
+2026-10-15T13:11:11.332Z  INFO 15925 --- [           main] dev.siddhant.mcpfabric.TlsTest           : Starting TlsTest using Java 21.0.12.1 with PID 15925 (started by root in /home/user/PROJECTS/mcp-fabric)
+2026-10-15T13:11:11.332Z  INFO 15925 --- [           main] dev.siddhant.mcpfabric.TlsTest           : No active profile set, falling back to 1 default profile: "default"
+2026-10-15T13:11:12.425Z  INFO 15925 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (https)
+2026-10-15T13:11:12.430Z  INFO 15925 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-15T13:11:12.430Z  INFO 15925 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-10-15T13:11:12.446Z  INFO 15925 --- [           main] o.a.c.c.C.[Tomcat-1].[localhost].[/]     : Initializing Spring embedded WebApplicationContext
+2026-10-15T13:11:12.447Z  INFO 15925 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1110 ms
+2026-10-15T13:11:12.703Z  WARN 15925 --- [           main] d.siddhant.mcpfabric.auth.Authenticator  : fabric.auth.mode=static: shared bearer tokens, for development only; use oauth in production
+2026-10-15T13:11:13.140Z  INFO 15925 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-15T13:11:13.473Z  INFO 15925 --- [           main] o.a.t.util.net.NioEndpoint.certificate   : Connector [https-jsse-nio-auto-2], TLS virtual host [_default_], certificate type [UNDEFINED] configured from keystore [/root/.keystore] using alias [fabric] with trust store [/etc/ssl/certs/java/cacerts]
+2026-10-15T13:11:13.535Z  INFO 15925 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 46697 (https) with context path '/'
+2026-10-15T13:11:13.544Z  INFO 15925 --- [           main] dev.siddhant.mcpfabric.TlsTest           : Started TlsTest in 3.885 seconds (process running for 35.638)
+2026-10-15T13:11:13.860Z  INFO 15925 --- [omcat-handler-5] o.a.c.c.C.[Tomcat-1].[localhost].[/]     : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-15T13:11:13.860Z  INFO 15925 --- [omcat-handler-5] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-15T13:11:13.862Z  INFO 15925 --- [omcat-handler-5] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.587 s -- in dev.siddhant.mcpfabric.TlsTest
+[INFO] Running dev.siddhant.mcpfabric.BenchmarkTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.030 s -- in dev.siddhant.mcpfabric.BenchmarkTest
+[INFO] Running dev.siddhant.mcpfabric.ExampleConfigTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.149 s -- in dev.siddhant.mcpfabric.ExampleConfigTest
+[INFO] Running dev.siddhant.mcpfabric.SecurityIntegrationTest
+2026-10-15T13:11:14.236Z  INFO 15925 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [dev.siddhant.mcpfabric.SecurityIntegrationTest]: SecurityIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-15T13:11:14.243Z  INFO 15925 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration dev.siddhant.mcpfabric.FabricApplication for test class dev.siddhant.mcpfabric.SecurityIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.5)
+
+2026-10-15T13:11:16.716Z  INFO 15925 --- [           main] d.s.mcpfabric.SecurityIntegrationTest    : Starting SecurityIntegrationTest using Java 21.0.12.1 with PID 15925 (started by root in /home/user/PROJECTS/mcp-fabric)
+2026-10-15T13:11:16.717Z  INFO 15925 --- [           main] d.s.mcpfabric.SecurityIntegrationTest    : No active profile set, falling back to 1 default profile: "default"
+2026-10-15T13:11:17.260Z  INFO 15925 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 0 (http)
+2026-10-15T13:11:17.261Z  INFO 15925 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-15T13:11:17.262Z  INFO 15925 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-10-15T13:11:17.282Z  INFO 15925 --- [           main] o.a.c.c.C.[Tomcat-2].[localhost].[/]     : Initializing Spring embedded WebApplicationContext
+2026-10-15T13:11:17.282Z  INFO 15925 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 556 ms
+2026-10-15T13:11:18.050Z  INFO 15925 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-15T13:11:18.108Z  INFO 15925 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 33109 (http) with context path '/'
+2026-10-15T13:11:18.123Z  INFO 15925 --- [           main] d.s.mcpfabric.SecurityIntegrationTest    : Started SecurityIntegrationTest in 3.867 seconds (process running for 40.218)
+2026-10-15T13:11:18.210Z  INFO 15925 --- [      http-beta] d.s.mcpfabric.upstream.HttpUpstream      : beta: ready (7 tools, 1 resources, 1 prompts)
+2026-10-15T13:11:18.772Z  INFO 15925 --- [omcat-handler-0] o.a.c.c.C.[Tomcat-2].[localhost].[/]     : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-15T13:11:18.772Z  INFO 15925 --- [omcat-handler-0] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-15T13:11:18.773Z  INFO 15925 --- [omcat-handler-0] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-10-15T13:11:18.781Z  WARN 15925 --- [    stdio-alpha] dev.siddhant.mcpfabric.guard.ToolGuard   : tool alpha__notes metadata flagged [hidden_characters, conceal_from_user, hidden_tag, override_instructions, cross_tool_directive, credential_reference]: REDACTED
+2026-10-15T13:11:18.820Z  INFO 15925 --- [    stdio-alpha] d.s.mcpfabric.upstream.StdioUpstream     : alpha: ready (10 tools, 1 resources, 1 prompts)
+2026-10-15T13:11:26.016Z  WARN 15925 --- [cat-handler-103] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Document nesting depth (1001) exceeds the maximum allowed (1000, from `StreamReadConstraints.getMaxNestingDepth()`)]
+2026-10-15T13:11:26.300Z  WARN 15925 --- [    virtual-777] dev.siddhant.mcpfabric.guard.ToolGuard   : tool alpha__echo changed after it was pinned (pinned 723894ae8d755593990ee7068fd26ad5102245811c30886e70d7c6cdf3eb74cb, now acf4f25fa98a6413db4a80b689f1ffc85c634858d40b4cc68ca5b76cdc87458b); quarantined
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 12.18 s -- in dev.siddhant.mcpfabric.SecurityIntegrationTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[WARNING] Tests run: 34, Failures: 0, Errors: 0, Skipped: 1
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.4.2:jar (default-jar) @ mcp-fabric ---
+[INFO] Building jar: /home/user/PROJECTS/mcp-fabric/target/mcp-fabric-0.1.0.jar
+[INFO] 
+[INFO] --- spring-boot:3.3.5:repackage (repackage) @ mcp-fabric ---
+[INFO] Replacing main artifact /home/user/PROJECTS/mcp-fabric/target/mcp-fabric-0.1.0.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to /home/user/PROJECTS/mcp-fabric/target/mcp-fabric-0.1.0.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  59.601 s
+[INFO] Finished at: 2026-10-15T13:11:28Z
+[INFO] ------------------------------------------------------------------------
