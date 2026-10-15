@@ -1,4 +1,4 @@
- 18:15:16 up 23 min,  0 user,  load average: 16.52, 53.25, 53.95
+ 23:04:01 up 12 min,  0 user,  load average: 144.93, 73.45, 29.85
 make --no-print-directory test-cache CACHE=64:1:64:1:4:4 MEMLAT=20
 verilator --cc --exe --build -j 4 -O3 --x-assign fast --x-initial fast --Mdir obj_dir_c64_1_64_1_4_4 -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --assert -GI_SETS=64 -GI_WAYS=1 -GD_SETS=64 -GD_WAYS=1 -GLINE_WORDS=4 -GWB_DEPTH=4 -CFLAGS "-O2 -std=c++17 -DCACHED -DI_SETS_SIM=64 -DI_WAYS_SIM=1 -DD_SETS_SIM=64 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=4" --top-module rv_top rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv rtl/rv_cache.sv tb/sim_main.cpp tb/iss.cpp
 g++  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17 -DCACHED -DI_SETS_SIM=64 -DI_WAYS_SIM=1 -DD_SETS_SIM=64 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=4   -Os -c -o sim_main.o ../tb/sim_main.cpp
@@ -840,11 +840,6 @@ riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdl
 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100198.elf has a LOAD segment with RWX permissions
 riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100199.S -o build/rand/rand_100199.elf
 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: build/rand/rand_100199.elf has a LOAD segment with RWX permissions
-verilator --cc --exe --build -j 4 -O3 --x-assign fast --x-initial fast \
-  -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --assert \
-  -CFLAGS "-O2 -std=c++17" --top-module rv_core rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv tb/sim_main.cpp tb/iss.cpp
-g++  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17   -Os -c -o sim_main.o ../tb/sim_main.cpp
-g++     iss.o sim_main.o verilated.o verilated_threads.o Vrv_core__ALL.a    -pthread -lpthread -latomic   -o Vrv_core
 obj_dir/Vrv_core --quiet --no-lockstep build/cache/smc_nofence.elf
 PASS build/cache/smc_nofence.elf: exit=0 cycles=34 instret=20 CPI=1.700 branches=6 mispredicts=6 irqs=0
 obj_dir_c16_2_16_2_4_2/Vrv_top --quiet --no-lockstep build/cache/smc_nofence.elf 2>&1 | tee build/cache/smc.log | grep -qE "PASS|exit=2"
@@ -863,7 +858,14 @@ PASS build/irq/irq_test.elf: exit=0 cycles=1501020 instret=390025 CPI=3.849 bran
 make --no-print-directory test-cache CACHE=4:1:4:1:4:2 MEMLAT=50 IRQ_PERIOD=2048
 verilator --cc --exe --build -j 4 -O3 --x-assign fast --x-initial fast --Mdir obj_dir_c4_1_4_1_4_2 -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --assert -GI_SETS=4 -GI_WAYS=1 -GD_SETS=4 -GD_WAYS=1 -GLINE_WORDS=4 -GWB_DEPTH=2 -CFLAGS "-O2 -std=c++17 -DCACHED -DI_SETS_SIM=4 -DI_WAYS_SIM=1 -DD_SETS_SIM=4 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=2" --top-module rv_top rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv rtl/rv_cache.sv tb/sim_main.cpp tb/iss.cpp
 g++  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17 -DCACHED -DI_SETS_SIM=4 -DI_WAYS_SIM=1 -DD_SETS_SIM=4 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=2   -Os -c -o sim_main.o ../tb/sim_main.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17 -DCACHED -DI_SETS_SIM=4 -DI_WAYS_SIM=1 -DD_SETS_SIM=4 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=2   -c -o verilated.o /usr/share/verilator/include/verilated.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17 -DCACHED -DI_SETS_SIM=4 -DI_WAYS_SIM=1 -DD_SETS_SIM=4 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=2   -c -o verilated_threads.o /usr/share/verilator/include/verilated_threads.cpp
+/usr/bin/python3 /usr/share/verilator/bin/verilator_includer -DVL_INCLUDE_OPT=include Vrv_top.cpp Vrv_top___024root__DepSet_hd83543ba__0.cpp Vrv_top___024root__DepSet_h4f0d83ed__0.cpp Vrv_top__ConstPool_0.cpp Vrv_top___024root__Slow.cpp Vrv_top___024root__DepSet_hd83543ba__0__Slow.cpp Vrv_top___024root__DepSet_h4f0d83ed__0__Slow.cpp Vrv_top__Syms.cpp > Vrv_top__ALL.cpp
+g++ -Os  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17 -DCACHED -DI_SETS_SIM=4 -DI_WAYS_SIM=1 -DD_SETS_SIM=4 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=2   -c -o Vrv_top__ALL.o Vrv_top__ALL.cpp
+echo "" > Vrv_top__ALL.verilator_deplist.tmp
+Archive ar -rcs Vrv_top__ALL.a Vrv_top__ALL.o
 g++     iss.o sim_main.o verilated.o verilated_threads.o Vrv_top__ALL.a    -pthread -lpthread -latomic   -o Vrv_top
+rm Vrv_top__ALL.verilator_deplist.tmp
 python3 tools/rvgen.py --count 200 --seed 1 --out build/rand
 make --no-print-directory rand-elfs
 riscv64-unknown-elf-gcc -march=rv32im_zicsr_zifencei -mabi=ilp32 -static -nostdlib -nostartfiles -T sw/link.ld build/rand/rand_100000.S -o build/rand/rand_100000.elf
@@ -1282,4 +1284,4 @@ PASS build/irq/irq_test.elf: exit=0 cycles=1706096 instret=79108 CPI=21.567 bran
 PASS build/irq/irq_test.elf: exit=0 cycles=1750106 instret=80442 CPI=21.756 branches=10302 mispredicts=9 irqs=848
 PASS build/irq/irq_test.elf: exit=0 cycles=1701828 instret=79025 CPI=21.535 branches=10196 mispredicts=9 irqs=779
 test-cache-all rc=0
- 18:20:44 up 29 min,  0 user,  load average: 23.51, 62.40, 60.25
+ 23:10:01 up 18 min,  0 user,  load average: 20.03, 35.88, 26.60

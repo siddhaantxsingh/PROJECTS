@@ -53,10 +53,10 @@ module rv_icache #(
     localparam int TAG_BITS = 32 - OFF_BITS - IDX_BITS;
     localparam int WB = $clog2(LINE_WORDS) > 0 ? $clog2(LINE_WORDS) : 1;
 
-    logic                valid [WAYS][SETS];
+    logic [WAYS-1:0][SETS-1:0] valid;   // packed, so reset/flush clear it in one assignment
     logic [TAG_BITS-1:0] tags  [WAYS][SETS];
     logic [31:0]         data  [WAYS][SETS*LINE_WORDS];
-    logic                lru   [SETS];   // way to replace next (2-way only)
+    logic [SETS-1:0]     lru;            // way to replace next (2-way only)
 
     wire [IDX_BITS-1:0] idx = addr[OFF_BITS +: IDX_BITS];
     wire [TAG_BITS-1:0] tag = addr[31 -: TAG_BITS];
@@ -89,8 +89,8 @@ module rv_icache #(
         if (!rst_n) begin
             state <= IDLE; cancel <= 1'b0; beat <= '0; perf_refills <= '0;
             fill_addr <= '0; fill_idx <= '0; fill_way <= 1'b0;
-            for (int w = 0; w < WAYS; w++) for (int s = 0; s < SETS; s++) valid[w][s] <= 1'b0;
-            for (int s = 0; s < SETS; s++) lru[s] <= 1'b0;
+            valid <= '0;
+            lru <= '0;
         end else begin
             if (hit && WAYS > 1) lru[idx] <= !hit_way;
             unique case (state)
@@ -118,7 +118,7 @@ module rv_icache #(
             // FENCE.I: invalidate all lines; a refill in flight may hold
             // pre-FENCE.I data, so it completes without being marked valid.
             if (flush) begin
-                for (int w = 0; w < WAYS; w++) for (int s = 0; s < SETS; s++) valid[w][s] <= 1'b0;
+                valid <= '0;
                 if (state != IDLE) cancel <= 1'b1;
             end
         end
@@ -174,10 +174,10 @@ module rv_dcache #(
     localparam int WB = $clog2(LINE_WORDS) > 0 ? $clog2(LINE_WORDS) : 1;
     localparam int QB = $clog2(WB_DEPTH);
 
-    logic                valid [WAYS][SETS];
+    logic [WAYS-1:0][SETS-1:0] valid;   // packed, so reset/flush clear it in one assignment
     logic [TAG_BITS-1:0] tags  [WAYS][SETS];
     logic [31:0]         data  [WAYS][SETS*LINE_WORDS];
-    logic                lru   [SETS];
+    logic [SETS-1:0]     lru;
 
     wire [IDX_BITS-1:0] idx = addr[OFF_BITS +: IDX_BITS];
     wire [TAG_BITS-1:0] tag = addr[31 -: TAG_BITS];
@@ -238,8 +238,8 @@ module rv_dcache #(
             fill_addr <= '0; fill_idx <= '0; fill_way <= 1'b0; fill_line <= 1'b0; uc_data <= '0;
             q_head <= '0; q_tail <= '0; q_count <= '0;
             perf_refills <= '0; perf_uncached <= '0; perf_wbuf_full <= '0;
-            for (int w = 0; w < WAYS; w++) for (int s = 0; s < SETS; s++) valid[w][s] <= 1'b0;
-            for (int s = 0; s < SETS; s++) lru[s] <= 1'b0;
+            valid <= '0;
+            lru <= '0;
         end else begin
             if ((load_hit || (we && hit && cacheable && store_ok)) && WAYS > 1) lru[idx] <= !hit_way;
             if (we && wb_full) perf_wbuf_full <= perf_wbuf_full + 32'd1;

@@ -1,0 +1,105 @@
+ 22:57:34 up 5 min,  0 user,  load average: 13.87, 7.24, 2.98
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3512938 instret=3153833 CPI=1.114 branches=653035 mispredicts=76786 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3155749 instret=3153834 CPI=1.001 branches=653034 mispredicts=0 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=248798 instret=201241 CPI=1.236 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=222297 instret=201242 CPI=1.105 branches=44740 mispredicts=0 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=262303 instret=229561 CPI=1.143 branches=68583 mispredicts=11628 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=232467 instret=229562 CPI=1.013 branches=68583 mispredicts=0 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=1697326 instret=1605596 CPI=1.057 branches=191464 mispredicts=43338 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=1608502 instret=1605597 CPI=1.002 branches=191464 mispredicts=0 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=13061 instret=10266 CPI=1.272 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=12116 instret=10267 CPI=1.180 branches=980 mispredicts=0 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=36608 instret=33836 CPI=1.082 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=36214 instret=33837 CPI=1.070 branches=7447 mispredicts=0 irqs=0
+Archive ar -rcs Vrv_top__ALL.a Vrv_top__ALL.o
+PASS build/bench/elf/coremark.elf: exit=0 cycles=5145302 instret=3153834 CPI=1.631 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=520556 instret=201242 CPI=2.587 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=368566 instret=229562 CPI=1.606 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=4645250 instret=1605752 CPI=2.893 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=29840 instret=10422 CPI=2.863 branches=1004 mispredicts=366 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=59415 instret=33837 CPI=1.756 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=7656495 instret=3153834 CPI=2.428 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=926455 instret=201242 CPI=4.604 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=527096 instret=229562 CPI=2.296 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=9126798 instret=1605752 CPI=5.684 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=53931 instret=10422 CPI=5.175 branches=1004 mispredicts=366 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=92080 instret=33837 CPI=2.721 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=10451424 instret=3153814 CPI=3.314 branches=653023 mispredicts=76784 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=1383560 instret=201397 CPI=6.870 branches=44764 mispredicts=11326 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=703986 instret=229562 CPI=3.067 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=14107351 instret=1605752 CPI=8.786 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=80708 instret=10422 CPI=7.744 branches=1004 mispredicts=366 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=128435 instret=33837 CPI=3.796 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=18853976 instret=3153814 CPI=5.978 branches=653023 mispredicts=76784 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=2773980 instret=201397 CPI=13.774 branches=44764 mispredicts=11326 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=1236866 instret=229562 CPI=5.388 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=29052358 instret=1605907 CPI=18.091 branches=191513 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=161321 instret=10422 CPI=15.479 branches=1004 mispredicts=366 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=238046 instret=33837 CPI=7.035 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3638751 instret=3153834 CPI=1.154 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=358244 instret=201242 CPI=1.780 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=322443 instret=229562 CPI=1.405 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=3582156 instret=1605752 CPI=2.231 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=16619 instret=10267 CPI=1.619 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=58564 instret=33837 CPI=1.731 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3831037 instret=3153834 CPI=1.215 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=510140 instret=201242 CPI=2.535 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=411692 instret=229562 CPI=1.793 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=6435347 instret=1605752 CPI=4.008 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=21834 instret=10267 CPI=2.127 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=89921 instret=33837 CPI=2.657 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=4045872 instret=3153834 CPI=1.283 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=682299 instret=201242 CPI=3.390 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=510911 instret=229562 CPI=2.226 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=9624706 instret=1605752 CPI=5.994 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=27684 instret=10267 CPI=2.696 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=124804 instret=33837 CPI=3.688 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=4697097 instret=3153834 CPI=1.489 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=1225390 instret=201397 CPI=6.084 branches=44764 mispredicts=11326 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=809559 instret=229562 CPI=3.527 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=19224980 instret=1605752 CPI=11.973 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=45513 instret=10267 CPI=4.433 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=229997 instret=33837 CPI=6.797 branches=7447 mispredicts=126 irqs=0
+Archive ar -rcs Vrv_top__ALL.a Vrv_top__ALL.o
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3606348 instret=3153834 CPI=1.143 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=375049 instret=201242 CPI=1.864 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=301932 instret=229562 CPI=1.315 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=3610302 instret=1605752 CPI=2.248 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=16156 instret=10267 CPI=1.574 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=57962 instret=33837 CPI=1.713 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3749843 instret=3153834 CPI=1.189 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=540249 instret=201242 CPI=2.685 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=360521 instret=229562 CPI=1.570 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=6516813 instret=1605752 CPI=4.058 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=20675 instret=10267 CPI=2.014 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=88413 instret=33837 CPI=2.613 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3910474 instret=3153834 CPI=1.240 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=734453 instret=201242 CPI=3.650 branches=44740 mispredicts=11325 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=425698 instret=229562 CPI=1.854 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=9763356 instret=1605752 CPI=6.080 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=25770 instret=10267 CPI=2.510 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=122321 instret=33837 CPI=3.615 branches=7447 mispredicts=126 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=4399730 instret=3153834 CPI=1.395 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/dhrystone.elf: exit=0 cycles=1321432 instret=201397 CPI=6.561 branches=44764 mispredicts=11326 irqs=0
+PASS build/bench/elf/qsort.elf: exit=0 cycles=621464 instret=229562 CPI=2.707 branches=68584 mispredicts=11629 irqs=0
+PASS build/bench/elf/spmv.elf: exit=0 cycles=19548177 instret=1605752 CPI=12.174 branches=191489 mispredicts=43339 irqs=0
+PASS build/bench/elf/towers.elf: exit=0 cycles=41265 instret=10267 CPI=4.019 branches=980 mispredicts=364 irqs=0
+PASS build/bench/elf/memcpy.elf: exit=0 cycles=224262 instret=33837 CPI=6.628 branches=7447 mispredicts=126 irqs=0
+%Error-BLKLOOPINIT: rtl/rv_cache.sv:121:84: Unsupported: Delayed assignment to array inside for loops (non-delayed is ok - see docs)
+  121 |                 for (int w = 0; w < WAYS; w++) for (int s = 0; s < SETS; s++) valid[w][s] <= 1'b0;
+      |                                                                                    ^
+                    ... For error description see https://verilator.org/warn/BLKLOOPINIT?v=5.020
+%Error-BLKLOOPINIT: rtl/rv_cache.sv:92:80: Unsupported: Delayed assignment to array inside for loops (non-delayed is ok - see docs)
+   92 |             for (int w = 0; w < WAYS; w++) for (int s = 0; s < SETS; s++) valid[w][s] <= 1'b0;
+      |                                                                                ^
+%Error-BLKLOOPINIT: rtl/rv_cache.sv:93:51: Unsupported: Delayed assignment to array inside for loops (non-delayed is ok - see docs)
+   93 |             for (int s = 0; s < SETS; s++) lru[s] <= 1'b0;
+      |                                                   ^~
+%Error-BLKLOOPINIT: rtl/rv_cache.sv:241:80: Unsupported: Delayed assignment to array inside for loops (non-delayed is ok - see docs)
+  241 |             for (int w = 0; w < WAYS; w++) for (int s = 0; s < SETS; s++) valid[w][s] <= 1'b0;
+      |                                                                                ^
+%Error: Exiting due to 4 error(s)
+        ... See the manual at https://verilator.org/verilator_doc.html for more assistance.
+make: *** [Makefile:136: obj_dir_c256_1_256_1_4_4/Vrv_top] Error 1
+sweep rc=2
+ 23:01:46 up 10 min,  0 user,  load average: 17.26, 13.01, 6.43

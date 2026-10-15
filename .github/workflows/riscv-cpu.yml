@@ -19,6 +19,8 @@ jobs:
       - run: make -j4 test-random RAND_N=150 RAND_SEED=${{ github.run_number }}
       - run: make test-irq
       - run: make test-variants
+      - run: make test-cache-all RAND_N=150 RAND_SEED=${{ github.run_number }}
+      - run: make test-single RAND_N=150 RAND_SEED=${{ github.run_number }}
       - run: make bench
       - run: make synth
   spike:
@@ -44,3 +46,6 @@ jobs:
           ../spike-src/configure --prefix=$HOME/spike && make -j4 && make install
       - run: make fetch
       - run: make -j4 test-spike SPIKE=$HOME/spike/bin/spike RAND_N=100 RAND_SEED=${{ github.run_number }}
+      - run: make sim-cache obj_dir_single/Vrv_core
+      - run: python3 tools/spike-compare.py --spike $HOME/spike/bin/spike --sim obj_dir_c64_1_64_1_4_4/Vrv_top build/rand/*.elf
+      - run: python3 tools/spike-compare.py --spike $HOME/spike/bin/spike --sim obj_dir_single/Vrv_core build/rand/*.elf

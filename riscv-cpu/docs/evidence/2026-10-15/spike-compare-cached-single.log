@@ -1,0 +1,26 @@
+ 23:10:02 up 18 min,  0 user,  load average: 20.03, 35.62, 26.57
+== obj_dir_c64_1_64_1_4_4/Vrv_topTraceback (most recent call last):
+  File "/home/user/PROJECTS/riscv-cpu/tools/spike-compare.py", line 144, in <module>
+    main()
+    ~~~~^^
+  File "/home/user/PROJECTS/riscv-cpu/tools/spike-compare.py", line 128, in main
+    s = spike_events(a.spike, elf)
+  File "/home/user/PROJECTS/riscv-cpu/tools/spike-compare.py", line 29, in spike_events
+    p = subprocess.run([spike, "--isa=rv32im_zicsr_zifencei_zicntr", "--priv=m", "-l", "--log-commits", elf],
+                       capture_output=True, text=True, timeout=600)
+  File "/usr/lib/python3.13/subprocess.py", line 557, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1223, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 2156, in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1270, in _check_timeout
+    raise TimeoutExpired(
+    ...<2 lines>...
+            stderr=b''.join(stderr_seq) if stderr_seq else None)
+subprocess.TimeoutExpired: Command '['/tmp/claude-0/-home-user-PROJECTS/6fee72ad-dbc2-5262-982a-1a11b9d97e54/scratchpad/spike/bin/spike', '--isa=rv32im_zicsr_zifencei_zicntr', '--priv=m', '-l', '--log-commits', 'build/cache/cache_test.elf']' timed out after 600 seconds
+rc=1
+== obj_dir_c4_1_4_1_4_2/Vrv_top
