@@ -5,3 +5,4 @@ tinyml/data/
 tinyml/c/m4/build/
 __pycache__/
 /deploy/certs/out/
+tinyml/board/build/

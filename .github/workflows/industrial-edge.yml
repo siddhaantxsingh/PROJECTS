@@ -18,3 +18,24 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./internal/...
       - run: go test -count=2 ./e2e/
+  tinyml:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: industrial-edge }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.24" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi qemu-system-arm
+      - run: pip install -r tinyml/requirements.txt
+      # committed model; checks host C and QEMU Cortex-M4/M3 bit-exactness on the whole test set
+      - run: SKIP_TRAIN=1 ./tinyml/run_all.sh
+  docker:
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: industrial-edge }
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./deploy/smoke.sh

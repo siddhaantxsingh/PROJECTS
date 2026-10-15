@@ -51,3 +51,7 @@ All tags change on every poll, so nothing is compressed away. Records are delive
 
 Latency runs from sample time to arrival at the subscriber. It covers the poll, the queue, batching (up to 500 records), the broker and the PUBACK window, but not the age of the value inside the PLC.
 
+
+## Edge ML (2026-10-14)
+
+See [tinyml.md](tinyml.md) and [predictive-maintenance.md](predictive-maintenance.md). QEMU instruction counts are deterministic (identical in three runs: `tinyml_pipeline.log`, `tinyml_ci_mode.log`); the machine was shared with other jobs (load average 2.5 at the start of the pipeline run, 11.6 for the CI-mode run). Go inference: about 47 µs per window on the host.

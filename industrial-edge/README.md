@@ -8,14 +8,18 @@ This is an industrial IoT edge gateway in Go, using only the standard library. I
    - EWMA anomaly detection;
    - ISA-18.2 alarms;
 3. buffers everything in a **crash-safe, disk-backed queue**;
-4. forwards it over **MQTT 3.1.1 at QoS 1** (implemented from the spec), committing data only once the broker acknowledges it.
+4. forwards it over **MQTT 3.1.1 at QoS 1** (implemented from the spec), over **TLS with client certificates and passwords**, committing data only once the broker acknowledges it;
+5. runs an **INT8 fault classifier** on vibration windows read over Modbus (TinyML, trained on synthetic data), raising ISA-18.2 fault alarms and **drift** alerts.
+
+The same classifier is a dependency-free C kernel for **ARM Cortex-M**, bit-exact with the Python reference and the Go port, tested in QEMU (Cortex-M4/M3).
 
 It loses nothing across broker outages and gateway crashes. A PLC simulator is included.
 
 **Status:**
 - **Done:** verified locally with a real broker (mosquitto) and a simulated plant.
+- **Done (2026-10-14):** TinyML classifier, gateway inference, predictive-maintenance evaluation, drift detection, MQTT/TLS, Docker smoke test — all on simulated data or emulated hardware.
 - **Not done:**
-  - no TLS or authentication;
+  - no real machine data, no real microcontroller measurement (steps in [OWNER_ACTIONS](docs/OWNER_ACTIONS.md));
   - Modbus TCP only;
   - not deployed.
 
@@ -31,6 +35,18 @@ See [limitations](docs/limitations.md).
 | Durable queue | 733 k appends/s with 100 ms group commit (5.3 k/s fsync-per-record); 1 M-record recovery scan in 63 ms |
 | Read coalescing | 50 tags → 1 Modbus request per poll |
 
+## Edge ML results (synthetic data; [tinyml](docs/tinyml.md), [predictive maintenance](docs/predictive-maintenance.md))
+
+| | |
+|---|---|
+| Fault classifier (6 classes, held-out speed band, 3,000 windows) | INT8 96.73 % accuracy, float 96.70 %; MLP 22-32-16-6, 1,366 parameters |
+| Bit-exactness | Python reference = C (host) = C on QEMU Cortex-M4 and M3 = Go, on every test window |
+| Cortex-M4 footprint (kernel) | ~3.0 KB code + 8.1 KB constants (6 KB are FFT tables); 10.2 KB RAM buffers, < 300 B stack |
+| Cortex-M4 work per window (QEMU, not cycle-accurate) | ≈ 490,000 instructions (FFTs ≈ 98 %); real-board cycles not measured |
+| Run-to-failure (simulated, 80 machines) | model detects 80/80 before failure, median lead 11.2 days, 0.11 false alarms/machine-day; EWMA baseline detects 0/80 |
+| Drift | PSI alerts on a 70 % sensor-gain loss and on unseen speeds; none on 1,500 in-distribution windows |
+| Docker | gateway + TLS mosquitto + simulator; smoke test passed |
+
 ## Run it
 
 ```bash
@@ -42,6 +58,8 @@ mosquitto_sub -t 'plant1/gw1/data' -q 1         # JSON batches
 curl -X POST 'http://127.0.0.1:9100/alarms/ack?dev=tank1&tag=level'
 ```
 
+With the hoist simulator and TLS: `deploy/smoke.sh` (Docker). TinyML pipeline: `tinyml/run_all.sh`.
+
 Tests: `go test ./...` (MQTT and e2e need `mosquitto` on PATH or at `/usr/sbin/mosquitto`). Benchmarks: `go run ./cmd/edgebench -out bench/results/$(date +%F) -broker 127.0.0.1:1883`, then `python3 bench/report.py <date>`.
 
 ## Documentation
@@ -51,3 +69,14 @@ Tests: `go test ./...` (MQTT and e2e need `mosquitto` on PATH or at `/usr/sbin/m
 - [Benchmarks](docs/benchmarks.md)
 - [Limitations](docs/limitations.md)
 - [Requirements matrix](docs/requirements.md)
+- [TinyML classifier](docs/tinyml.md), [predictive maintenance](docs/predictive-maintenance.md), [security and Docker](docs/security-deployment.md)
+- [Owner actions](docs/OWNER_ACTIONS.md)
+
+## Scorecard (2026-10-14)
+
+| Score (0–10) | | Why not higher |
+|---|---|---|
+| Fresher-portfolio strength | 8 | Everything ML runs on synthetic data and emulated hardware; no real sensor or board. |
+| Engineering maturity | 7 | Strong tests (bit-exact checks, crash tests, TLS refusals), but drift/alarm thresholds are untuned and one e2e test flaked under heavy machine load. |
+| Deployment readiness | 4 | Docker smoke test only; no real PLCs, no fleet management, demo PKI, model false-alarm rate too high for production. |
+| Completion of intended scope | 7 | TinyML, PdM evaluation, drift, TLS and Docker done; real-board latency and real data are owner-only; fleet cloud workflows not built. |

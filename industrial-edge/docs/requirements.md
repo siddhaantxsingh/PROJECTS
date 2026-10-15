@@ -13,7 +13,16 @@
 | Observability (metrics, health) | VERIFIED | `/metrics`, `/healthz`; asserted in e2e |
 | Throughput / latency measurement | VERIFIED | 1,000 tags at 10 Hz, 10k records/s, p99 127 ms |
 | Configuration validation | VERIFIED | tests |
-| Security (TLS, authentication) | NOT IMPLEMENTED | documented |
+| Security (TLS, authentication) | VERIFIED | MQTT over TLS + client certificates + password, plaintext refusal; mosquitto tests and e2e (`docs/security-deployment.md`, `docs/evidence/2026-10-14/go_tests.log`, `e2e.log`) |
 | OPC UA, Modbus RTU, other protocols | NOT IMPLEMENTED | — |
-| Docker / deployment | NOT IMPLEMENTED | — |
-| CI | VERIFIED | `.github/workflows/industrial-edge.yml` green on GitHub Actions (run 38516430120), including e2e with mosquitto |
+| Docker / deployment | VERIFIED (local) | Dockerfile + compose (gateway, TLS mosquitto, plcsim); smoke test passed here (`docs/evidence/2026-10-14/docker_smoke.log`). Not deployed anywhere. |
+| CI (before 2026-10-14 changes) | VERIFIED | `.github/workflows/industrial-edge.yml` green on GitHub Actions (run 38516430120), including e2e with mosquitto |
+| TinyML fault classifier (synthetic data) | VERIFIED (emulated) | INT8 MLP, 96.73 % on held-out-speed synthetic test set; float 96.70 % (`docs/tinyml.md`, `tinyml_pipeline.log`) |
+| C INT8 kernel bit-exact with Python reference | VERIFIED | all 3,000 test windows, host gcc and QEMU Cortex-M4/M3 (`tinyml_pipeline.log`, `tinyml_ci_mode.log`) |
+| Cortex-M footprint and speed | VERIFIED (QEMU estimate only) | ~11 KB flash, ~10.5 KB RAM; ≈ 490 k instructions/window from SysTick under `-icount`. No real-hardware cycles. |
+| Real-board latency | BLOCKED (needs hardware) | script and steps in `docs/OWNER_ACTIONS.md`; board image runs bit-exact on QEMU netduinoplus2 |
+| Edge inference in the gateway (Go port, bit-exact) | VERIFIED | `TestBitExactWholeTestSet`, gateway inference tests, TLS e2e, Docker smoke |
+| Predictive-maintenance evaluation vs EWMA | VERIFIED (simulated) | `docs/predictive-maintenance.md`, `bench/results/2026-10-14/pdm.json` |
+| Drift detection (PSI, Page-Hinkley) with alerts | VERIFIED (simulated drift) | `internal/drift` tests, gateway drift test |
+| Real machine data | NOT IMPLEMENTED | only synthetic data; see `docs/OWNER_ACTIONS.md` |
+| CI for the new jobs (tinyml, docker) | see README | |

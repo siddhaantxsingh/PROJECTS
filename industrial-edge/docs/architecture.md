@@ -16,6 +16,8 @@
 
 Everything uses only the Go standard library. Modbus TCP and MQTT 3.1.1 are implemented from their specifications.
 
+Edge ML branch: a device with a `vibration` section is read every `period_ms` (seq, speed, current, 1,024 samples in 9 Modbus reads, seq again to reject torn windows) → fixed-point features + INT8 MLP (`internal/tinyml`) → `prediction` records, a `fault` pseudo-tag with an ISA-18.2 alarm (on-delay = `alarm_windows`), and `drift` records (PSI, Page-Hinkley) → same queue and uplink. The uplink can use TLS with client certificates and a password.
+
 ## Data path
 
 * **Polling.** Each device has a goroutine that polls every `poll_ms`.
