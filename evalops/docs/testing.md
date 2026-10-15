@@ -1,6 +1,6 @@
 # Testing
 
-`mvn verify` runs 8 tests in about 20 s.
+`mvn verify` runs 16 tests in about a minute. The worker tests need `python3` on the PATH. Output of the last local run: `docs/evidence/2026-10-15/mvn_verify_reliability.log`.
 
 ## `MetricsStatsTest`
 
@@ -29,3 +29,18 @@ These run the real service with an in-memory H2 database, against a fake OpenAI-
 | `interruptedRunsResumeWithoutRedoingFinishedItems` | A run "interrupted" after 7 of 20 items resumes on start-up and sends exactly 13 requests. |
 
 The integration tests found a design flaw. A rule with only `minValue` also applied a drop check, because `maxDrop` silently defaulted to 0. Each condition now applies only when given, and a rule with neither is rejected.
+
+## `ReliabilityIntegrationTest`
+
+The real service, with the outbox relay's schedule off (tests drain it explicitly), against one fake HTTP server that plays a completions target, a chat judge, a webhook receiver and the GitHub REST API.
+
+| Test | What it proves |
+|---|---|
+| `eventsCommitWithStateAndAreNotLostWhenPublishingFails` | A finished run has exactly `run.queued`, `run.running`, `run.finished` in the outbox, unpublished, before any relay ran (the "crash between commit and publish"). With the webhook down, nothing is published or lost, and the run's later events are not attempted out of order. A **new relay instance** then publishes all three, once each. |
+| `crashAfterDeliveryRedeliversAndConsumersApplyEachEventOnce` | A fault hook throws right after the webhook accepted `run.finished`. The next pass redelivers it: the webhook sees the same event id **twice** (at least once), the run counter moves **once**. Two more direct deliveries to the counter change nothing. |
+| `idempotencyKeysMakeRunCreationSafeToRetry` | A replay returns the same run with `Idempotent-Replayed: true`; a different body with the same key is 422; **8 concurrent first attempts** create exactly one run and one `run.queued` event. |
+| `checkRunsArePublishedOnceWithTheRightShape` | The exact call sequence (list, create, in_progress, completed), headers (`Bearer` token, `application/vnd.github+json`, API version) and bodies (name, head_sha, external_id, conclusion, output title and summary with the gate result). A redelivered `run.finished`, and a redelivery after the stored check-run id was lost, create **no second check run**. A request without `head_sha` is 400. |
+| `gitHubAppAuthMintsAnInstallationToken` | With App settings, the service signs a JWT that the fake verifies (RS256 signature with a generated key, issuer, lifetime ≤ 10 min), gets an installation token, uses it, and caches it. |
+| `judgeScoresWithAFixedRubricAndGreedyDecoding` | `llm_judge` without a judge is 400. Verdicts YES/NO/unparsable score 1/0/0 with the parse flag; requests carry temperature 0, seed 0 and the fixed rubric; an identical run sends **zero** judge requests. |
+| `workersLeaseTasksAndAKilledWorkersTaskIsTakenOver` | Three Python worker processes finish a 6-item run. Then a worker is **killed with SIGKILL** in the middle of a 2-second item; after its 1-second lease expires a second worker takes the item with token 2 and finishes the run. A completion with the dead worker's token 1 is 409. |
+| `aPausedWorkersLateResultIsRejectedByItsFencingToken` | A worker is **paused with SIGSTOP** mid-item, so its lease expires; another worker takes over and finishes. After **SIGCONT**, the first worker posts its result with the old token, gets 409 and logs "result discarded (stale lease)". The stored result is the second worker's. |
