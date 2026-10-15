@@ -40,7 +40,7 @@ Sections marked *(updated when the audit finishes)* depend on audits that are st
 |---|---|---|---|
 | Internship at Tata Steel, July 2026 | None. A text search of PROJECTS (15 projects), the 5 standalone repos, MESP and the matrix-multiplier repo found no mention of Tata Steel. | OWNER MUST VERIFY | Offer letter, experience certificate or stipend record; manager's name and email for reference checks |
 | Role title | none | OWNER MUST VERIFY | The title on the certificate |
-| TinyML fault detection on ARM Cortex-M | None from the internship. A separate personal project now has a Cortex-M INT8 classifier run in QEMU; it is **not** internship work *(updated when the audit finishes)* | OWNER MUST VERIFY | MCU part number; model type and size; how latency was measured; accuracy on held-out data; permission to describe |
+| TinyML fault detection on ARM Cortex-M | None from the internship. A separate personal project (Industrial Edge) now has a Cortex-M INT8 classifier, trained on synthetic data and run in QEMU only; it is **not** internship work | OWNER MUST VERIFY | MCU part number; model type and size; how latency was measured; accuracy on held-out data; permission to describe |
 | Sub-100 ms inference | none | OWNER MUST VERIFY | A latency log or test report from the internship |
 | INT8 quantization (ML resume) | none from the internship | OWNER MUST VERIFY | Training or conversion notebook or report |
 | RAG over 500+ pages of SOPs | None from the internship. Groundwork and Campus AI OS are separate personal RAG projects | OWNER MUST VERIFY | Document count and pages; architecture; who used it |
@@ -66,13 +66,13 @@ When you describe the personal projects, present them as separate work, for exam
 
 | Claim | Evidence | Status |
 |---|---|---|
-| Raft KV: Go, **gRPC, C++** | RAFT-KV repo *(updated when the audit finishes)* | *(pending)* |
-| Raft KV: 5-node cluster, snapshotting, recovers within 2× election timeout | RAFT-KV repo *(updated when the audit finishes)* | *(pending)* |
-| Raft KV: "documented log compaction and membership-change trade-offs" | Membership changes were NOT IMPLEMENTED at baseline (ADR 0005, static membership) *(updated when the audit finishes)* | *(pending)* |
+| Raft KV: Go, **gRPC, C++** | Go is correct. Peer RPC is gob over HTTP/1.1 and clients use JSON/REST: there is **no gRPC**. There is **no C++** (the optional store is Rust behind a C header) | **PARTLY SUPPORTED.** Remove "gRPC" and "C++" |
+| Raft KV: 5-node cluster, snapshotting, recovers within 2× election timeout | 5-process chaos runs are linearizable (7/7 runs). Chunked snapshots are tested. In 45 leader-kill trials on 5 nodes, a new leader was elected in p50 ≈ 360 ms (max 751 ms): 45/45 within 2× the maximum election timeout and 44/45 within 2× the minimum. One shared machine (`raft-kv/docs/evidence/2026-10-14/`) | **SUPPORTED** (local, single machine) |
+| Raft KV: "documented log compaction and membership-change trade-offs" | Single-server membership changes (Raft thesis §4) with learner catch-up are now implemented and tested (ADR 0006), including changes during network-partition chaos. Joint consensus is not implemented | **SUPPORTED** |
 | **Kubernetes PaaS Platform** (Go, Kubernetes, Docker, gRPC); 47 s → 12 s deploys; "findings discussed on Hacker News" | No such repository among the owner's 12 GitHub repositories. Nebula GPU Cloud is a Rust GPU scheduler, not a Kubernetes PaaS. | **NOT SUPPORTED BY ANY REPO.** High interview risk. Remove it, or publish the code and the benchmark log plus a link to the HN thread |
-| Collaborative editor (CRDTs): no central lock | TANDEM repo *(updated when the audit finishes)* | *(pending)* |
-| "Implemented operational transformation as an alternate merge strategy across 50+ simulated editors" | TANDEM repo *(updated when the audit finishes)* | *(pending)* |
-| Sub-50 ms edit propagation over WebSockets; offline reconciliation | TANDEM repo *(updated when the audit finishes)* | *(pending)* |
+| Collaborative editor (CRDTs): no central lock | Yjs CRDT. Randomized offline test: 2–5 clients on 2 server nodes, 200/200 runs converge byte-identically | **SUPPORTED** |
+| "Implemented operational transformation as an alternate merge strategy across 50+ simulated editors" | **There is no OT code.** The project uses only the Yjs CRDT. The "50+ editors" part is supported: load tests used 50 active editors, and 1,000 connected | **OT: FALSE, remove it.** 50+ editors: SUPPORTED |
+| Sub-50 ms edit propagation over WebSockets; offline reconciliation | One node with 50 editors: median 25–44 ms, but p95 0.2–0.35 s and p99 0.3–0.5 s. Two nodes with Redis: median 74–166 ms. Shared, overloaded machine. Offline reconciliation is verified | **PARTLY SUPPORTED.** Write "median under 50 ms on a single node", or re-measure on a quiet machine |
 | Skills: Kafka, GraphQL Federation, Kubernetes, AWS, Redux | No portfolio repository uses them (one Nebula doc mentions Kubernetes only as the intended stack) | Keep only skills you can discuss in depth |
 
 ### 2.2 ML resume
@@ -86,7 +86,7 @@ When you describe the personal projects, present them as separate work, for exam
 | HNSW over **1M+** embeddings | Benchmarks use n = 100,000 vectors × 128 dims (synthetic) | **PARTLY SUPPORTED:** say 100k, or run a 1M benchmark and save the log |
 | PQ compresses storage **8×** with **95%+ recall@10** | PQ m = 32: codes are 15.4× smaller than f32, and recall@10 is 0.95 with rerank ×4 (`vectordb/docs/benchmarks.md`) | **SUPPORTED, with a caveat:** the measured ratio is 15×, and 0.95 needs exact reranking of 40 candidates. Write "15× smaller codes; 0.95 recall@10 with exact re-ranking" |
 | p50/p99 latency vs graph parameters | `vectordb/docs/benchmarks.md` (ef sweep, compared with FAISS) | **SUPPORTED** |
-| TinyML Edge Inference Engine: INT8 on Cortex-M, sub-100 ms, < 50 KB RAM, **three model architectures**, accuracy vs float | The new Industrial Edge TinyML module has one model, run in QEMU *(updated when the audit finishes)* | *(pending)* |
+| TinyML Edge Inference Engine: INT8 on Cortex-M, sub-100 ms, < 50 KB RAM, **three model architectures**, accuracy vs float | Industrial Edge has **one** model (an MLP, 22-32-16-6), INT8, bit-identical in C, Go and Python. Size on Cortex-M4: ~3 KB code, ~8 KB constants, ~10.2 KB RAM, under 50 KB. Accuracy: 96.7 % INT8 vs 96.7 % float, on synthetic data. Speed: ~490k instructions per inference in **QEMU** (an estimated 6–9 ms at 80 MHz, **not measured on hardware**) | **PARTLY SUPPORTED.** "<50 KB RAM" and "accuracy vs float" are supported. "Three model architectures" is not (there is one). "Sub-100 ms" is only an emulator estimate until run on a real board. The repo is not a standalone "TinyML inference engine" project |
 
 ### 2.3 Electronics resume
 
@@ -98,7 +98,7 @@ When you describe the personal projects, present them as separate work, for exam
 | "Benchmarked clock frequency and IPC against a single-cycle baseline" | Measured CPI is 1.01–1.34 and CoreMark 2.87/MHz (2.43 without the branch predictor). There is no single-cycle baseline and no Fmax measurement *(Fmax may be added; updated when the audit finishes)* | **PARTLY SUPPORTED** |
 | ASIC matrix multipliers (serial, pipelined, parallel), Genus and Innovus, met 4 ns timing | Matrix-multiplier repo: Genus timing reports at a 4.0 ns clock with positive slack on all 9 designs (176–1,272 ps); Innovus layout screenshots for the 3×3 designs | **SUPPORTED** for synthesis. Say layouts were done for the 3×3 designs |
 | "Co-authored resulting paper, under review" | none | OWNER MUST VERIFY (submission confirmation email) |
-| TinyML engine (same claim as the ML resume) | see 2.2 | *(pending)* |
+| TinyML engine (same claim as the ML resume) | see 2.2 | PARTLY SUPPORTED (see 2.2) |
 | Skills: Vivado, Quartus, Virtuoso, ModelSim | The Mixed-node CMOS inverter repo may show Virtuoso (not inspected); there is no Vivado or Quartus project | Keep only tools you used for real |
 
 ### 2.4 Shared claims (all resumes)
