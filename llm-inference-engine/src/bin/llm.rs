@@ -112,8 +112,15 @@ fn main() {
                 prompt = t.apply_chat_template(&msgs).expect("chat template");
             }
             let t0 = Instant::now();
-            let ids = t.encode_prompt(&prompt);
+            // --prompt-ids 1,2,3 gives the prompt as token ids (validation scripts)
+            let ids = match a.0.get("prompt-ids") {
+                Some(v) => v.split(',').map(|x| x.trim().parse::<u32>().expect("prompt-ids")).collect(),
+                None => t.encode_prompt(&prompt),
+            };
             let (toks, text, u) = e.generate(vec![(ids, sp)]).remove(0);
+            if let Some(f) = a.0.get("ids-out") {
+                std::fs::write(f, serde_json::to_string(&toks).unwrap()).expect("write --ids-out");
+            }
             if cmd == "chat" {
                 println!("{text}");
             } else {
@@ -199,11 +206,14 @@ fn main() {
             // --input F: a JSON list of strings -> a JSON list of token-id lists (no BOS)
             let (_, t) = load(&a);
             let texts: Vec<String> = serde_json::from_str(&std::fs::read_to_string(a.get("input", "")).expect("--input FILE")).unwrap();
-            let ids: Vec<Vec<u32>> = texts.iter().map(|x| t.encode(x.as_bytes())).collect();
-            for (x, i) in texts.iter().zip(&ids) {
-                assert_eq!(t.decode(i), x.as_bytes(), "decode(encode(x)) != x for {x:?}");
-            }
-            println!("{}", serde_json::to_string(&ids).unwrap());
+            let out: Vec<serde_json::Value> = texts
+                .iter()
+                .map(|x| {
+                    let ids = t.encode(x.as_bytes());
+                    json!({"ids": ids, "roundtrip": t.decode(&ids) == x.as_bytes()})
+                })
+                .collect();
+            println!("{}", serde_json::to_string(&out).unwrap());
         }
         "spec" => {
             // speculative vs plain greedy decoding, one sequence at a time
@@ -345,7 +355,10 @@ fn dump(a: &Args) {
         }
     }
     std::fs::write(a.get("out", "logits.f32"), &out).expect("write --out");
-    println!("{}", json!({"prompts": prompts.len(), "positions": prompts.iter().map(|p| p.len()).sum::<usize>(), "vocab": m.cfg.vocab}));
+    println!(
+        "{}",
+        json!({"prompts": prompts.len(), "positions": prompts.iter().map(|p| p.len()).sum::<usize>(), "vocab": m.cfg.vocab})
+    );
 }
 
 /// Prefix caching: requests that share a long prefix (a "system prompt"),
@@ -354,8 +367,12 @@ fn prefix_bench(a: &Args) {
     let (m, t) = load(a);
     let text = std::fs::read(a.get("text", "")).expect("--text FILE");
     let ids = t.encode(&text);
-    let (n, plen, slen, ngen): (usize, usize, usize, usize) =
-        (a.num("requests", 8), a.num("prefix-tokens", 512), a.num("suffix-tokens", 16), a.num("gen-tokens", 16));
+    let (n, plen, slen, ngen): (usize, usize, usize, usize) = (
+        a.num("requests", 8),
+        a.num("prefix-tokens", 512),
+        a.num("suffix-tokens", 16),
+        a.num("gen-tokens", 16),
+    );
     let prefix = &ids[..plen];
     let mut rows = vec![];
     for cache in [false, true] {

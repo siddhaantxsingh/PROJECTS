@@ -164,14 +164,19 @@ impl Tokenizer {
     pub fn from_gguf(g: &Gguf) -> Result<Tokenizer, String> {
         let model = g.get_str("tokenizer.ggml.model")?;
         if model != "gpt2" {
-            return Err(format!("tokenizer model {model:?} is not supported (only byte-level BPE, \"gpt2\")"));
+            return Err(format!(
+                "tokenizer model {model:?} is not supported (only byte-level BPE, \"gpt2\")"
+            ));
         }
         let pre = g.get("tokenizer.ggml.pre").and_then(|v| v.as_str()).unwrap_or("default");
         let regexes = pre_regexes(pre)?
             .into_iter()
             .map(|r| fancy_regex::Regex::new(r).map_err(|e| e.to_string()))
             .collect::<Result<Vec<_>, _>>()?;
-        let toks = g.get("tokenizer.ggml.tokens").and_then(|v| v.as_arr()).ok_or("missing tokenizer.ggml.tokens")?;
+        let toks = g
+            .get("tokenizer.ggml.tokens")
+            .and_then(|v| v.as_arr())
+            .ok_or("missing tokenizer.ggml.tokens")?;
         let types: Vec<u64> = match g.get("tokenizer.ggml.token_type").and_then(|v| v.as_arr()) {
             Some(a) => a.iter().map(|v| v.as_u64().unwrap_or(1)).collect(),
             None => vec![1; toks.len()],
@@ -196,13 +201,24 @@ impl Tokenizer {
                 special.push((s.as_bytes().to_vec(), i as u32));
             } else {
                 // a normal token's string is in the byte-to-unicode alphabet
-                bytes.push(s.chars().map(|c| u2b.get(&c).copied().ok_or(format!("token {i} {s:?}: char outside the byte alphabet"))).collect::<Result<Vec<u8>, String>>()?);
+                bytes.push(
+                    s.chars()
+                        .map(|c| {
+                            u2b.get(&c)
+                                .copied()
+                                .ok_or(format!("token {i} {s:?}: char outside the byte alphabet"))
+                        })
+                        .collect::<Result<Vec<u8>, String>>()?,
+                );
             }
         }
         special.sort_by(|a, b| b.0.len().cmp(&a.0.len()).then(a.1.cmp(&b.1)));
         // some vocabularies lack a few control bytes; those become `unk`
         let byte_tok: Vec<Option<u32>> = (0..256).map(|b| id_of.get(b2u[b].to_string().as_str()).copied()).collect();
-        let ms = g.get("tokenizer.ggml.merges").and_then(|v| v.as_arr()).ok_or("missing tokenizer.ggml.merges")?;
+        let ms = g
+            .get("tokenizer.ggml.merges")
+            .and_then(|v| v.as_arr())
+            .ok_or("missing tokenizer.ggml.merges")?;
         let mut merges = HashMap::with_capacity(ms.len());
         for (r, m) in ms.iter().enumerate() {
             let m = m.as_str().ok_or("non-string merge")?;
@@ -211,10 +227,17 @@ impl Tokenizer {
                 return Err(format!("merge {m:?}: unknown token"));
             };
             let merged = format!("{a}{b}");
-            let &im = id_of.get(merged.as_str()).ok_or(format!("merge {m:?}: result not in the vocabulary"))?;
+            let &im = id_of
+                .get(merged.as_str())
+                .ok_or(format!("merge {m:?}: result not in the vocabulary"))?;
             merges.entry((ia, ib)).or_insert((r as u32, im));
         }
-        let opt = |k: &str| g.get(k).and_then(|v| v.as_u64()).map(|v| v as u32).filter(|&v| (v as usize) < toks.len());
+        let opt = |k: &str| {
+            g.get(k)
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32)
+                .filter(|&v| (v as usize) < toks.len())
+        };
         let (bos, eos) = (opt("tokenizer.ggml.bos_token_id"), opt("tokenizer.ggml.eos_token_id"));
         let unk = opt("tokenizer.ggml.unknown_token_id");
         let mut stop_ids: Vec<u32> = [eos, opt("tokenizer.ggml.eot_token_id")].into_iter().flatten().collect();
@@ -353,13 +376,26 @@ impl Tokenizer {
 }
 
 /// The default system message in a ChatML template: the text of a string
-/// literal `'<|im_start|>system\n...<|im_end|>` (escape sequences decoded).
+/// literal `'<|im_start|>system\n...<|im_end|>` that holds the whole message
+/// (not one that continues with `' + messages[0]['content']`), with escape
+/// sequences decoded.
 fn default_system(tpl: &str) -> Option<String> {
-    for lit in ["'<|im_start|>system\\n", "'<|im_start|>system\n", "\"<|im_start|>system\\n"] {
-        if let Some(p) = tpl.find(lit) {
-            let rest = &tpl[p + lit.len()..];
-            let end = rest.find("<|im_end|>")?;
-            return Some(rest[..end].replace("\\n", "\n").replace("\\'", "'"));
+    // the newline after "system" is either an escape (`\n`) or a real newline
+    for (q, lit) in [
+        ('\'', "'<|im_start|>system\\n"),
+        ('\'', "'<|im_start|>system\n"),
+        ('"', "\"<|im_start|>system\\n"),
+        ('"', "\"<|im_start|>system\n"),
+    ] {
+        let mut from = 0;
+        while let Some(p) = tpl[from..].find(lit) {
+            let rest = &tpl[from + p + lit.len()..];
+            from += p + lit.len();
+            let Some(end) = rest.find("<|im_end|>") else { break };
+            let body = &rest[..end];
+            if !body.replace(&format!("\\{q}"), "").contains(q) {
+                return Some(body.replace("\\n", "\n").replace(&format!("\\{q}"), &q.to_string()));
+            }
         }
     }
     None

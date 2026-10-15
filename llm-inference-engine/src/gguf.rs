@@ -152,9 +152,11 @@ struct Cursor<'a> {
 
 impl<'a> Cursor<'a> {
     fn take(&mut self, n: usize) -> Result<&'a [u8], String> {
-        let end = self.p.checked_add(n).filter(|&e| e <= self.b.len()).ok_or_else(|| {
-            format!("truncated file: need {n} bytes at offset {}, file has {}", self.p, self.b.len())
-        })?;
+        let end = self
+            .p
+            .checked_add(n)
+            .filter(|&e| e <= self.b.len())
+            .ok_or_else(|| format!("truncated file: need {n} bytes at offset {}, file has {}", self.p, self.b.len()))?;
         let s = &self.b[self.p..end];
         self.p = end;
         Ok(s)
@@ -316,7 +318,10 @@ impl Gguf {
         }
         let alignment = match meta.get("general.alignment") {
             None => 32,
-            Some(v) => v.as_u64().filter(|a| *a > 0 && a.is_power_of_two()).ok_or("invalid general.alignment")? as usize,
+            Some(v) => v
+                .as_u64()
+                .filter(|a| *a > 0 && a.is_power_of_two())
+                .ok_or("invalid general.alignment")? as usize,
         };
         let data_start = c.p.div_ceil(alignment) * alignment;
         let g = Gguf {
@@ -329,7 +334,11 @@ impl Gguf {
         };
         // check every tensor of a supported type lies inside the file
         for t in &g.tensors {
-            let n = t.dims.iter().try_fold(1u64, |a, &d| a.checked_mul(d)).ok_or(format!("{}: size overflows", t.name))?;
+            let n = t
+                .dims
+                .iter()
+                .try_fold(1u64, |a, &d| a.checked_mul(d))
+                .ok_or(format!("{}: size overflows", t.name))?;
             if !t.offset.is_multiple_of(alignment as u64) {
                 return Err(format!("{}: offset {} not aligned to {alignment}", t.name, t.offset));
             }
@@ -349,13 +358,19 @@ impl Gguf {
         self.meta.get(key)
     }
     pub fn get_u64(&self, key: &str) -> Result<u64, String> {
-        self.get(key).and_then(Value::as_u64).ok_or(format!("missing or non-integer metadata {key}"))
+        self.get(key)
+            .and_then(Value::as_u64)
+            .ok_or(format!("missing or non-integer metadata {key}"))
     }
     pub fn get_f64(&self, key: &str) -> Result<f64, String> {
-        self.get(key).and_then(Value::as_f64).ok_or(format!("missing or non-numeric metadata {key}"))
+        self.get(key)
+            .and_then(Value::as_f64)
+            .ok_or(format!("missing or non-numeric metadata {key}"))
     }
     pub fn get_str(&self, key: &str) -> Result<&str, String> {
-        self.get(key).and_then(Value::as_str).ok_or(format!("missing or non-string metadata {key}"))
+        self.get(key)
+            .and_then(Value::as_str)
+            .ok_or(format!("missing or non-string metadata {key}"))
     }
 
     pub fn tensor(&self, name: &str) -> Option<&TensorInfo> {
@@ -396,7 +411,7 @@ pub fn dequantize(dtype: DType, raw: &[u8]) -> Vec<f32> {
             .collect(),
         DType::Q8_0 => {
             let mut out = Vec::with_capacity(raw.len() / 34 * 32);
-            for blk in raw.chunks_exact(34) {
+            for blk in raw.as_chunks::<34>().0 {
                 let d = f16_to_f32(u16::from_le_bytes([blk[0], blk[1]]));
                 out.extend(blk[2..].iter().map(|&q| q as i8 as f32 * d));
             }

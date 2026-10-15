@@ -197,7 +197,11 @@ impl Model {
         };
         let vecf = |name: &str, n: usize| g.tensor_f32(name, &[n]);
         let opt_vec = |name: &str, n: usize| -> Result<Option<Vec<f32>>, String> {
-            if g.tensor(name).is_some() { Ok(Some(vecf(name, n)?)) } else { Ok(None) }
+            if g.tensor(name).is_some() {
+                Ok(Some(vecf(name, n)?))
+            } else {
+                Ok(None)
+            }
         };
         let (kvd, c) = (cfg.kv_dim(), &cfg);
         let mut layers = vec![];

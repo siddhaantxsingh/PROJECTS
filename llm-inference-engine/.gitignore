@@ -2,3 +2,4 @@ target/
 train/artifacts/*.pkl
 train/__pycache__/
 *.gguf
+!tests/fixtures/*.gguf
