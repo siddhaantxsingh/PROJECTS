@@ -80,8 +80,8 @@ When you describe the personal projects, present them as separate work, for exam
 | Claim | Evidence | Status |
 |---|---|---|
 | LLM fine-tuning with **LoRA** | No repository contains LoRA or any fine-tuning code. Groundwork does retrieval and grounded generation only | **NOT SUPPORTED BY ANY REPO** |
-| "90%+ accuracy on a held-out QA set" | Groundwork reports retrieval and citation metrics *(updated when the audit finishes)* | *(pending)* |
-| "Indexed 10,000+ documents … sub-second retrieval" | Groundwork corpus size *(updated when the audit finishes)* | *(pending)* |
+| "90%+ accuracy on a held-out QA set" | No QA-accuracy measurement exists. Groundwork measures retrieval: the best Recall@10 is 0.925 (nomic embeddings, 80 known-item queries on a 31-document sub-corpus), and NDCG@10 is 0.70 for hybrid. Small local LLMs (Qwen2.5-0.5B) were poorly grounded (0.15) before the checker | **NOT SUPPORTED.** Use retrieval metrics instead, labelled as such |
+| "Indexed 10,000+ documents … sub-second retrieval" | The corpus is 122 documents (Python standard-library docs; 3,401 chunks). Retrieval takes milliseconds (BM25 0.2 ms; hybrid 12–27 ms not counting query embedding). LLM answers take 1.6–3.5 s median on a CPU | **PARTLY SUPPORTED:** sub-second retrieval yes, 10,000+ documents no |
 | Vector DB in **C++, Python** | `PROJECTS/vectordb` is **Rust** (with a Python benchmark harness) | **PARTLY SUPPORTED:** fix the language |
 | HNSW over **1M+** embeddings | Benchmarks use n = 100,000 vectors × 128 dims (synthetic) | **PARTLY SUPPORTED:** say 100k, or run a 1M benchmark and save the log |
 | PQ compresses storage **8×** with **95%+ recall@10** | PQ m = 32: codes are 15.4× smaller than f32, and recall@10 is 0.95 with rerank ×4 (`vectordb/docs/benchmarks.md`) | **SUPPORTED, with a caveat:** the measured ratio is 15×, and 0.95 needs exact reranking of 40 candidates. Write "15× smaller codes; 0.95 recall@10 with exact re-ranking" |
