@@ -17,7 +17,7 @@ Utilisation = M·N·K / (cycles × N²). The testbench asserts that the cycle co
 | 4×4 | 8×8×64 | 316 | 81.0 % |
 | 4×4 | 64×64×256 | 69,376 | 94.5 % |
 
-At a clock of f MHz, an 8×8 array delivers 64·f·utilisation MAC/s. There is no timing data, because no place-and-route was done.
+At a clock of f MHz, an 8×8 array delivers 64·f·utilisation MAC/s. Timing comes from the open-PDK flow in [physical_design.md](physical_design.md): a single PE closes at 100 MHz (INT8 + FP8) or 125 MHz (INT8 only) in sky130hd typical; the 4×4 top level was only placed, with an estimated ~29-30 MHz limited by the un-pipelined post unit.
 
 ## Accuracy of FP8 accumulation (32×256×32, Gaussian data quantised per tensor)
 
@@ -42,3 +42,15 @@ FP8 quantisation itself costs 3.6 % (E4M3) and 7.6 % (E5M2) mean error relative 
 
 Exact FP8 accumulation makes each PE about 21× larger in LUTs than an INT8-only PE. The 80-bit barrel shifter and adder dominate. The full `npu_top` was not synthesised: its 48 KiB of scratchpad are behavioural arrays and would need BRAM macros.
 
+
+## ASIC (sky130hd typical, OpenROAD-flow-scripts; academic PDK, no sign-off)
+
+Details and the full sweep: [physical_design.md](physical_design.md).
+
+| block | stage reached | cell area | fastest closed clock | power at 10 ns (vectorless) |
+|---|---|---|---|---|
+| PE, INT8 only | routed, GDS | 7,046 µm² (10 ns) | 125 MHz (8 ns) | 1.48 mW |
+| PE, INT8 + FP8 | routed, GDS | 24,642 µm² (10 ns) | 100 MHz (10 ns) | 9.69 mW |
+| top level 4×4, 8×8×16 scratchpads | detailed placement | 942,404 µm² placed (100,606 cells synthesised) | not closed; −4.04 ns at 30 ns before CTS | — |
+
+In sky130hd the exact-FP8 PE costs 3.5× the area of the INT8-only PE (2.8× in nangate45), not 21× as the ECP5 LUT count suggests.

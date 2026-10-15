@@ -18,11 +18,12 @@
 | `bad_dimensions_set_error` | M = 0, M > 64, K > 256, INT8 output in FP8 mode → error bit; the accelerator works afterwards |
 | `cycle_counts_match_the_schedule` | cycle counts equal K + 3N + 3 per tile exactly (also the utilisation numbers) |
 
+* **Small physical configuration.** `tb/test_small.py` (`make test-small`) runs 8 bit-exact tests on N = 4 with 8×8×16 scratchpads, the configuration built by the ASIC flow. The same tests are the gate-level suite (`flow/scripts/gls.sh`).
 * **Lint:** `verilator --lint-only -Wall` is clean.
 
 ## Not done
 
 - No formal equivalence checks against the model.
 - No coverage measurement.
-- No gate-level simulation.
+- Gate-level simulation was run on the synthesised 4×4 sky130hd netlist only (8/8 bit-exact, see [physical_design.md](physical_design.md)); not on the routed netlist, and without timing (SDF).
 - No testing of back-to-back runs racing host writes; host writes are ignored while busy, by design.

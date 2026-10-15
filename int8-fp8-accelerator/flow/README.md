@@ -89,9 +89,11 @@ The useful files are:
    macros (nangate45 has `fakeram45_*` models; sky130 needs OpenRAM or the
    sky130 SRAM macros) and `ADDITIONAL_LEF/LIB/GDS` in `config.mk`.
 5. Start with a relaxed clock, read the floorplan-stage WNS in
-   `2_1_floorplan.json`, then sweep. On a shared 4-core machine a 100k-cell
-   sky130hd design needs about 0.5-1 h for synthesis and several hours for
-   place and route; a 3k-cell block needs minutes.
+   `2_1_floorplan.json`, then sweep. Measured here on a shared 4-vCPU VM: a
+   100k-cell sky130hd design took 36 min to synthesise, 5 min to floorplan
+   and ~25 min to place (CTS and routing were not completed); a 3k-cell PE
+   ran the whole flow in about 10-15 min. Each ORFS stage writes a 70-150 MB
+   .odb for a 100k-cell design, so keep several GB of disk free.
 6. Gate-level simulation: `scripts/gls.sh` needs a cocotb test whose top
    level matches the netlist's top. Clock-to-Q delay comes from the SkyWater
    models' `UNIT_DELAY`; everything else is zero delay, so this checks logic,

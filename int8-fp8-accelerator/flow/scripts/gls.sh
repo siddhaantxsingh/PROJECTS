@@ -3,7 +3,7 @@
 # model (tb/test_small.py, 8 cocotb tests, every output word compared).
 #
 # Usage: flow/scripts/gls.sh <netlist.v> <tag> <models>
-#   models = lib       Verilator + functional models generated from the PDK
+#   models = lib       Icarus (or GLS_SIM=verilator) + functional models generated from the PDK
 #                      Liberty file by Yosys read_liberty (sky130hd or nangate45).
 #                      Needs LIB=<liberty file>.
 #   models = skywater  Icarus Verilog + the official SkyWater sky130_fd_sc_hd
@@ -33,8 +33,9 @@ case $models in
         *) echo "ERROR: no functional model for $c" >&2; exit 1 ;;
       esac
     done
-    make -C "$root/tb" -f Makefile.small SIM=verilator SMALL_TAG="$tag" \
-      SMALL_SRC="$net $work/cells_lib.v $work/cells_phys.v" SMALL_EXTRA="-Wno-MULTIDRIVEN"
+    if [ "${GLS_SIM:-icarus}" = verilator ]; then extra="-Wno-MULTIDRIVEN"; else extra=""; fi
+    make -C "$root/tb" -f Makefile.small SIM="${GLS_SIM:-icarus}" SMALL_TAG="$tag" \
+      SMALL_SRC="$net $work/cells_lib.v $work/cells_phys.v" SMALL_EXTRA="$extra"
     ;;
   skywater)
     : "${SKY130_HD:?set SKY130_HD to the sky130_fd_sc_hd checkout}"
