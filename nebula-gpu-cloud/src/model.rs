@@ -14,6 +14,11 @@ pub struct Gpu {
     /// GPUs with the same island id are connected by NVLink/NVSwitch.
     pub island: u32,
     pub healthy: bool,
+    /// reported by real-GPU agents (from nvidia-smi); absent for simulated GPUs
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_mb: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,6 +81,14 @@ pub struct JobSpec {
     pub command: Vec<String>,
     #[serde(default)]
     pub name: String,
+    /// container runtime only: image, CPU and memory limits (agent defaults
+    /// apply when absent; the process runtime ignores them)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpus: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_mb: Option<u64>,
 }
 
 fn yes() -> bool {

@@ -12,6 +12,8 @@ fn node(id: &str, gpus: u32, islands: u32, model: &str) -> Node {
                 model: model.into(),
                 island: i / per,
                 healthy: true,
+                memory_mb: None,
+                uuid: None,
             })
             .collect(),
         state: NodeState::Up,
@@ -48,6 +50,9 @@ fn spec(tenant: &str, gpus: u32, est: f64) -> JobSpec {
         est_runtime: est,
         command: vec![],
         name: String::new(),
+        image: None,
+        cpus: None,
+        memory_mb: None,
     }
 }
 

@@ -7,6 +7,8 @@
 | `tests/sched.rs` (16 tests) | Targeted scheduler behaviour, plus two properties (below). |
 | `tests/store.rs` (3 tests) | Recovery: replay and crash safety (below). |
 | `tests/sim.rs` (3 tests) | The simulator (below). |
+| `tests/agent_runtime.rs` (4 tests) | The Docker runtime against the real daemon, and GPU detection with a stand-in `nvidia-smi` (below). |
+| `src/gpu.rs`, `src/runtime.rs` unit tests | `nvidia-smi` CSV parser (5 tests); `docker run` arguments: hardening flags, limits, GPU pass-through and renumbering, root refused (3 tests). |
 | `tests/e2e.rs` (2 tests) | Real `nebulad` and two `nebula-agent` processes on loopback, with shell commands as jobs (below). |
 | `src/store.rs` unit tests | The CRC-32C known-answer value; record decoding stops at a torn or corrupt record at every cut point. |
 
@@ -89,7 +91,19 @@ The second test, `example_config_parses`, loads `configs/example.json`.
 
 The e2e test was run 5 times in a row without failure while developing (about 17 s each).
 
+## `tests/agent_runtime.rs`
+
+Real `nebulad` and `nebula-agent --runtime docker` processes, with the real Docker daemon and `alpine:3.20`. Without Docker the tests print `SKIPPED` and pass, unless `NEBULA_REQUIRE_DOCKER=1` is set; CI sets it.
+
+* **Limits and hardening.** A probe job prints its uid/gid (65534), fails to write to `/` (read-only rootfs), shows `CapEff` 0 and `NoNewPrivs` 1, sees only the `lo` interface, and can write to `/tmp`. A running container's `docker inspect` shows 0.5 CPU, 64 MiB memory and swap, read-only root, `CapDrop [ALL]`, `no-new-privileges`, network `none`, PID limit 256, user `65534:65534`, and the `nebula.*` labels.
+* **Cancel.** Cancelling a job runs its SIGTERM handler, then the container is removed. A job whose PID 1 ignores SIGTERM (`sleep`) is killed after the 2 s grace period, not before.
+* **OOM.** `tail /dev/zero` under a 16 MiB limit fails the job with `exit code 137 ... OOM-killed (memory limit 16 MiB)`. A small job on the same node still succeeds.
+* **Orphans.** The agent is SIGKILLed while a job's container runs. The container survives. A new agent with the same id removes it and runs attempt 1 in a new container.
+* **GPU detection.** A stand-in `nvidia-smi` script prints one RTX 4060 line. The node registers with that name, `memory_mb` 8188 and the UUID, and a job constrained to that model runs with `CUDA_VISIBLE_DEVICES=0`.
+
+Runs on 2026-10-15 (machine shared with other agents): [agent_runtime_tests.log](evidence/2026-10-15/agent_runtime_tests.log), three more in [agent_runtime_repeat3.log](evidence/2026-10-15/agent_runtime_repeat3.log). Full suite, fmt and clippy: [ci_local.log](evidence/2026-10-15/ci_local.log).
+
 ## Not tested
 
-* Real GPUs or CUDA. GPUs are simulated by the agent; see [limitations](limitations.md).
+* Real GPUs or CUDA, and `--gpus` pass-through. See [OWNER_ACTIONS.md](OWNER_ACTIONS.md).
 * Network partitions where an agent keeps running jobs while the control plane has requeued them elsewhere. The jobs would run twice until the agent's next successful heartbeat; see [limitations](limitations.md).

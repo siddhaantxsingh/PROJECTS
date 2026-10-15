@@ -4,9 +4,11 @@ Nebula is the control plane for a multi-tenant GPU cluster. It is written in Rus
 
 * **`nebulad`** is the scheduler and API server. It does topology-aware gang scheduling over NVLink islands and nodes, weighted fair share with quotas, EASY backfill, priority preemption with a minimal victim set, failure handling and usage metering. Its state is durable: an fsynced journal plus snapshots.
 * **`nebula-agent`** runs on each node. It runs job commands with `CUDA_VISIBLE_DEVICES` and gang-rank environment variables, and reconciles its processes against the control plane on every heartbeat.
+  * `--runtime docker` runs each job attempt in a container: CPU and memory limits from the job spec, read-only root, all capabilities dropped, no-new-privileges, non-root user, no network, and `--gpus device=<ids>` when real GPUs exist. An OOM kill fails the job; containers left behind by a crashed agent are removed.
+  * If `nvidia-smi` is installed the agent reports the real GPUs (name, memory, UUID); otherwise it simulates them.
 * **`nebula-sim`** is a discrete-event simulator. It compares scheduling policies using the same scheduler code.
 
-**Status: done.** All tests pass, and the benchmarks were measured on this machine. **There are no real GPUs here.** The agent simulates them; see [limitations](docs/limitations.md).
+**Status:** all tests pass, and the benchmarks were measured on this machine. The Docker runtime is tested against a real Docker daemon. **There are no real GPUs here.** Real-GPU detection is tested with a stand-in `nvidia-smi`, and GPU pass-through has never run on a GPU (BLOCKED; [owner actions](docs/OWNER_ACTIONS.md)). There is no TLS or mTLS. See [limitations](docs/limitations.md).
 
 ## Results
 
@@ -36,6 +38,9 @@ curl -s -H 'Authorization: Bearer change-me-research' -H 'content-type: applicat
 curl -s -H 'Authorization: Bearer change-me-research' http://127.0.0.1:7070/v1/jobs/1
 curl -s -H 'Authorization: Bearer change-me-research' http://127.0.0.1:7070/v1/usage
 curl -s http://127.0.0.1:7070/metrics
+# container runtime: limits come from the job ("cpus", "memory_mb", "image") or the agent defaults
+./target/release/nebula-agent --server http://127.0.0.1:7070 --token change-me-node --id node-2 --gpus 8 \
+     --runtime docker --image alpine:3.20 --default-memory-mb 512 &
 ./target/release/nebula-sim --jobs 4000 --load 1.0 --seeds 3          # policy comparison
 ```
 
@@ -55,7 +60,19 @@ src/sched.rs     scheduler (pure functions) and invariant checker
 src/store.rs     commands, journal, snapshots, recovery
 src/server.rs    HTTP API, control loop, node protocol
 src/sim.rs       workload model and discrete-event simulator
+src/runtime.rs   Docker container runtime for the agent
+src/gpu.rs       nvidia-smi GPU discovery
 src/bin/         nebulad, nebula-agent, nebula-sim, nebula-bench
-tests/           sched (incl. proptest), store, sim, e2e
+tests/           sched (incl. proptest), store, sim, e2e, agent_runtime (Docker)
+scripts/         owner_gpu_check.sh (real-GPU check for the owner)
 bench/           run.sh, report.py, results/
 ```
+
+## Scorecard (2026-10-15, self-assessed)
+
+| Score | /10 | Why not higher |
+|---|---|---|
+| Fresher-portfolio strength | 8 | Strong scheduler, durability and container work, but nothing has run on a real GPU. |
+| Engineering maturity | 7 | Property, crash and real-Docker tests; but one lock, no TLS, and the agent shells out to the docker CLI. |
+| Deployment readiness | 4 | No TLS/mTLS, no HA, no real-GPU validation, no packaging or service units. |
+| Completion of intended scope | 7 | Scheduling, recovery, quotas and containers done; real GPU, NVML health and mTLS are not. |

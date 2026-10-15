@@ -109,6 +109,9 @@ pub fn workload(cfg: &SimConfig) -> Vec<WorkItem> {
                     est_runtime: est,
                     command: vec![],
                     name: format!("job-{i}"),
+                    image: None,
+                    cpus: None,
+                    memory_mb: None,
                 },
             }
         })
@@ -130,6 +133,8 @@ pub fn build_cluster(cfg: &SimConfig) -> Cluster {
                         model: "h100".into(),
                         island: i / per,
                         healthy: true,
+                        memory_mb: None,
+                        uuid: None,
                     })
                     .collect(),
                 state: NodeState::Up,

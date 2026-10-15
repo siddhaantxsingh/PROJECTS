@@ -296,6 +296,12 @@ pub struct JobRequest {
     pub command: Vec<String>,
     #[serde(default)]
     pub name: String,
+    #[serde(default)]
+    pub image: Option<String>,
+    #[serde(default)]
+    pub cpus: Option<f64>,
+    #[serde(default)]
+    pub memory_mb: Option<u64>,
 }
 
 fn yes() -> bool {
@@ -317,6 +323,19 @@ async fn submit(
     if r.command.is_empty() {
         return Err(err(StatusCode::BAD_REQUEST, "command must not be empty"));
     }
+    if r.cpus.is_some_and(|c| !(c > 0.0 && c <= 1024.0)) {
+        return Err(err(StatusCode::BAD_REQUEST, "cpus must be in (0, 1024]"));
+    }
+    // Docker refuses memory limits below 6 MiB
+    if r.memory_mb.is_some_and(|m| !(6..=16 << 20).contains(&m)) {
+        return Err(err(StatusCode::BAD_REQUEST, "memory_mb must be in [6, 16777216]"));
+    }
+    if r.image
+        .as_deref()
+        .is_some_and(|i| i.is_empty() || i.starts_with('-') || i.chars().any(char::is_whitespace))
+    {
+        return Err(err(StatusCode::BAD_REQUEST, "invalid image name"));
+    }
     let spec = JobSpec {
         tenant: t.name.clone(),
         gpus: r.gpus,
@@ -326,6 +345,9 @@ async fn submit(
         est_runtime: r.est_runtime,
         command: r.command,
         name: r.name,
+        image: r.image,
+        cpus: r.cpus,
+        memory_mb: r.memory_mb,
     };
     match app.inner.lock().exec(Cmd::Submit { spec, now: now() }) {
         Applied::Job(id) => Ok((StatusCode::CREATED, Json(json!({ "id": id })))),
@@ -489,6 +511,10 @@ pub struct GpuInfo {
     pub index: u32,
     pub model: String,
     pub island: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_mb: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uuid: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -513,6 +539,8 @@ async fn register(State(app): State<App>, h: HeaderMap, Json(r): Json<RegisterRe
                 model: g.model.clone(),
                 island: g.island,
                 healthy: true,
+                memory_mb: g.memory_mb,
+                uuid: g.uuid.clone(),
             })
             .collect(),
         state: NodeState::Up,
@@ -571,6 +599,12 @@ pub struct Assignment {
     pub gpus: Vec<u32>,
     pub command: Vec<String>,
     pub env: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpus: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_mb: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -670,6 +704,9 @@ pub fn assignments_for(c: &Cluster, node: &str) -> Vec<Assignment> {
             gpus,
             command: j.spec.command.clone(),
             env,
+            image: j.spec.image.clone(),
+            cpus: j.spec.cpus,
+            memory_mb: j.spec.memory_mb,
         });
     }
     out

@@ -12,6 +12,8 @@ fn node(id: &str) -> Node {
                 model: "h100".into(),
                 island: i / 4,
                 healthy: true,
+                memory_mb: None,
+                uuid: None,
             })
             .collect(),
         state: NodeState::Up,
@@ -83,6 +85,9 @@ fn drive(st: &mut Store, c: &mut Cluster, ops: &[(u8, u16)]) -> Vec<serde_json::
                     est_runtime: 10.0 + x as f64,
                     command: vec!["true".into()],
                     name: format!("j{x}"),
+                    image: None,
+                    cpus: None,
+                    memory_mb: None,
                 },
                 now,
             },

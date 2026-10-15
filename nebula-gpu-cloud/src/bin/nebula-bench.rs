@@ -85,6 +85,8 @@ async fn main() {
                 gpus: (0..8)
                     .map(|i| GpuInfo {
                         index: i,
+                        memory_mb: None,
+                        uuid: None,
                         model: "h100".into(),
                         island: i / 4,
                     })

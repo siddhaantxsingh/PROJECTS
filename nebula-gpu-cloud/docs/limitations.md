@@ -1,9 +1,20 @@
 # Limitations
 
 * **No real GPUs.** This was built on a machine without GPUs.
-  * The agent reports a configured number of fake devices and sets `CUDA_VISIBLE_DEVICES`.
+  * Without `nvidia-smi` the agent reports a configured number of fake devices and sets `CUDA_VISIBLE_DEVICES`.
+  * With `nvidia-smi` it reports the real devices (name, memory, UUID). This path was tested only with a stand-in script that prints the documented CSV format.
+  * `--gpus device=<ids>` pass-through in the Docker runtime has never run against a real GPU. `scripts/owner_gpu_check.sh` is the owner's check.
+  * NVLink topology is not detected (`nvidia-smi topo -m` is not parsed). Islands come from `--islands`.
   * Health checks (NVML/DCGM: ECC errors, Xid events, thermals) are replaced by a file-based failure injector.
   * Nothing here has run a CUDA program.
+* **The container runtime shells out to the `docker` CLI.**
+  * One `docker ps` per heartbeat interval, plus `inspect`/`logs`/`rm` when a container exits. This is fine for tens of containers per node, not for hundreds.
+  * The CLI calls block the agent's single-threaded event loop for their duration.
+  * Logs are copied with `docker logs` after the container exits, not streamed.
+  * Orphaned containers (after an agent crash) are removed, not adopted. The control plane requeues all of a node's jobs when the node registers again, so adopting them would run the job twice.
+  * The job gets a read-only root and a 64 MiB `/tmp` tmpfs; there is no persistent volume or dataset mount.
+  * Rootless Docker, user namespaces, seccomp profiles beyond Docker's default, and gVisor are not configured.
+  * The image is chosen by the job (`image`) without an allow-list or signature check.
 * **The topology model is two-level** (NVLink island inside a node, then nodes). There is no notion of racks, rail-optimised networks, spine oversubscription or PCIe/NUMA affinity.
 * **The simulator's slow-down factors (1.1× across islands, 1.3× across extra nodes) are assumptions**, not measurements. The placement-quality metrics do not depend on them, and one run in [benchmarks.md](benchmarks.md) removes them. The workload is synthetic, not a production trace.
 * **Fencing is missing.**
@@ -22,5 +33,5 @@
 * **Security is minimal.**
   * There are static bearer tokens from the config file, compared in constant time. One shared node token is used by all agents, with no per-node identity or mTLS.
   * There is no TLS: put it behind a TLS-terminating proxy.
-  * Commands run as the agent's user, with no container isolation, cgroups or GPU memory limits.
+  * With the default `process` runtime, commands run as the agent's user, with no isolation, cgroups or GPU memory limits. `--runtime docker` adds container isolation and CPU/memory limits; GPU memory is still not limited.
 * **Usage is metered but not billed.** There are GPU-seconds per job and per tenant, but no prices, invoices or budgets.

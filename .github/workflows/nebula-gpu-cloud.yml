@@ -16,7 +16,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: nebula-gpu-cloud }
       - run: cargo build --locked --release --all-targets
+      # the agent_runtime tests use the runner's Docker daemon
+      - run: docker pull alpine:3.20
       - run: cargo test --locked --release
+        env: { NEBULA_REQUIRE_DOCKER: "1" }
       - run: cargo fmt --check
       - run: cargo clippy --locked --release --all-targets -- -D warnings
       # small runs of both benchmarks as smoke tests (not performance gates)
