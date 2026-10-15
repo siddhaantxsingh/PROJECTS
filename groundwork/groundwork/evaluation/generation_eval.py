@@ -76,6 +76,7 @@ def evaluate_generation(corpus, ds, queries: list[dict], cfg, provider, k: int =
             row["raw_groundedness"] = raw["groundedness"]
             row["raw_citation_precision"] = raw["citation_precision"]
             row["dropped_sentences"] = ans.usage.get("dropped_sentences", 0)
+            row["auto_attributed"] = ans.usage.get("auto_attributed_sentences", 0)
         row["question"] = q["text"]
         row["answer"] = ans.text
         if keep_answers:

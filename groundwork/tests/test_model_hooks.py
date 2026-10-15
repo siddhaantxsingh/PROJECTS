@@ -168,3 +168,14 @@ def test_switching_to_a_fixed_embedder_reembeds_stored_vectors(db_url):
 def test_generation_metric_helpers():
     assert strip_citations("Oil every 500 hours [1, 2]. Yes [3].") == "Oil every 500 hours . Yes ."
     assert query_term_coverage("gearbox oil interval", "The gearbox oil [1].") == pytest.approx(2 / 3)
+
+
+def test_uncited_copied_sentence_is_attributed_to_its_source_unless_strict():
+    # Observed with Qwen2.5-0.5B in Campus AI OS: the right sentence, but no [n] marker.
+    raw = "Inspect the blades once a year. Bring a ladder."
+    a = GroundedProvider(FixedProvider(raw)).generate("blades?", SOURCES)
+    assert not a.abstained and a.text == "Inspect the blades once a year [2]."
+    assert a.usage["auto_attributed_sentences"] == 1 and a.usage["dropped_sentences"] == 1
+    assert check_grounding(a).groundedness == 1.0
+    strict = GroundedProvider(FixedProvider(raw), attribute_uncited=False).generate("blades?", SOURCES)
+    assert strict.abstained and strict.provider == "fixed+enforced-strict"

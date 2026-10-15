@@ -9,5 +9,7 @@ export default defineConfig({
     launchOptions: { executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" },
     trace: "retain-on-failure",
   },
-  webServer: { command: "../scripts/e2e-server.sh", url: "http://127.0.0.1:8123/healthz", reuseExistingServer: false, timeout: 60_000 },
+  webServer: { command: "../scripts/e2e-server.sh", url: "http://127.0.0.1:8123/healthz", reuseExistingServer: false,
+    // loading a local GGUF model at start-up can take minutes on a busy CPU
+    timeout: process.env.CAMPUS_LLM_PROVIDER ? 300_000 : 60_000 },
 });

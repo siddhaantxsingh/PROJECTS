@@ -1,49 +1,10 @@
-[2m[WebServer] [22mINFO:     Started server process [4743]
+[2m[WebServer] [22mINFO:     Started server process [1222]
 [2m[WebServer] [22mINFO:     Waiting for application startup.
 [2m[WebServer] [22mINFO:     Application startup complete.
 [2m[WebServer] [22mINFO:     Uvicorn running on http://127.0.0.1:8123 (Press CTRL+C to quit)
 
-Running 2 tests using 1 worker
+Running 1 test using 1 worker
 
-  -  1 e2e/campus-llm.spec.ts:22:1 › a local LLM writes the answer; citations are checked and shown
-  ✘  2 e2e/campus.spec.ts:26:1 › faculty publishes material; student gets a cited answer, studies, takes a quiz; faculty sees analytics (1.0m)
+  ✓  1 e2e/campus.spec.ts:26:1 › faculty publishes material; student gets a cited answer, studies, takes a quiz; faculty sees analytics (17.0s)
 
-
-  1) e2e/campus.spec.ts:26:1 › faculty publishes material; student gets a cited answer, studies, takes a quiz; faculty sees analytics 
-
-    [31mTest timeout of 60000ms exceeded.[39m
-
-    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m()[22m failed
-
-    Locator:  getByText('Alice (student)')
-    Expected: visible
-    Received: <element(s) not found>
-
-    Call log:
-    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
-    [2m  - waiting for getByText('Alice (student)')[22m
-
-
-      14 |   await page.getByLabel("Password").fill(PW);
-      15 |   await page.getByRole("button", { name: "Register" }).click();
-    > 16 |   await expect(page.getByText(`${name} (student)`)).toBeVisible();
-         |                                                     ^
-      17 | }
-      18 |
-      19 | async function signIn(page: Page, email: string, pw = PW) {
-        at register (/home/user/PROJECTS/campus-ai-os/frontend/e2e/campus.spec.ts:16:53)
-        at /home/user/PROJECTS/campus-ai-os/frontend/e2e/campus.spec.ts:50:3
-
-    Error Context: test-results/campus-faculty-publishes-m-76e56-quiz-faculty-sees-analytics/error-context.md
-
-    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/campus-faculty-publishes-m-76e56-quiz-faculty-sees-analytics/trace.zip
-    Usage:
-
-        npx playwright show-trace test-results/campus-faculty-publishes-m-76e56-quiz-faculty-sees-analytics/trace.zip
-
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-  1 failed
-    e2e/campus.spec.ts:26:1 › faculty publishes material; student gets a cited answer, studies, takes a quiz; faculty sees analytics 
-  1 skipped
+  1 passed (1.2m)

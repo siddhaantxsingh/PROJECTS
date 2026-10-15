@@ -6,7 +6,7 @@ export type Doc = { id: string; name: string; bytes: number; pages: number; crea
 export type Source = { n: number; document: string; doc_id: string; pages: [number, number]; section: string; excerpt: string };
 export type Answer = {
   answer: string; abstained: boolean; question_id: string; sources: Source[]; provider: string;
-  usage?: { dropped_sentences?: number; tokens_out?: number };
+  usage?: { dropped_sentences?: number; auto_attributed_sentences?: number; tokens_out?: number };
   grounding: { groundedness: number | null; citation_precision: number | null };
   timings_ms: Record<string, number>; excluded_sources: { document: string; reasons: string[] }[];
 };

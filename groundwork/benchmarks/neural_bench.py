@@ -301,6 +301,45 @@ def part_generation(out: Path, n: int, n_small: int, vector_cache, ds: Dataset) 
     (out / "generation.json").write_text(json.dumps(log, indent=2))
 
 
+class Replay:
+    """Returns the raw model answers recorded by `part_generation` (no model call), so
+    grounding-enforcement variants can be re-graded on exactly the same generations."""
+
+    def __init__(self, name, rows):
+        from groundwork.generate import ABSTAIN
+
+        self.name, self.abstain = name, ABSTAIN
+        self.by_q = {r["question"]: r["answer"] for r in rows}
+
+    def generate(self, query, sources):
+        from groundwork.generate import Answer, parse_citations
+
+        text = self.by_q[query]
+        _, cites = parse_citations(text, max_source=len(sources))
+        return Answer(text, sources, cites, text == self.abstain, self.name, {})
+
+
+def part_regrade(out: Path, vector_cache, ds: Dataset) -> None:
+    gen = json.loads((out / "generation.json").read_text())
+    _, nomic, emb, _ = corpora(ds, vector_cache)
+    w = max(json.loads((out / "retrieval.json").read_text())["tuning_dev"]["nomic_fusion_weight"], key=lambda x: x["ndcg@10"])["dense_weight"]
+    cfg = RetrievalConfig("hybrid", fusion="weighted", dense_weight=w, rerank=True, rerank_weights=RerankWeights(**PROTO["rerank"]))
+    runs = {}
+    for label, model in (("qwen2.5-0.5b-instruct (raw)", "llamacpp:qwen2.5-0.5B-F16"), ("smollm2 (raw)", "llamacpp:smollm2-latest")):
+        rows = gen["per_query"][label]
+        qs = [q for q in ds.split("test") if q["text"] in {r["question"] for r in rows}]
+        rp = Replay(model, rows)
+        for variant, prov in (("enforced, strict (drop uncited)", GroundedProvider(rp, attribute_uncited=False)),
+                              ("enforced + attribution of uncited sentences", GroundedProvider(rp))):
+            res = evaluate_generation(nomic, ds, qs, cfg, prov, k=5, max_sources=4, relevance_embedder=emb)
+            res["summary"]["auto_attributed_sentences"] = sum(r.get("auto_attributed", 0) for r in res["per_query"])
+            runs[f"{label.split(' (')[0]} {variant}"] = res
+            print(variant, label, json.dumps(res["summary"]), flush=True)
+    (out / "generation_regrade.json").write_text(json.dumps({"env": env(), "note": "re-grades the SAME raw generations recorded in generation.json; generate_ms is not meaningful here",
+                                                              "runs": {k: v["summary"] for k, v in runs.items()},
+                                                              "per_query": {k: v["per_query"] for k, v in runs.items()}}, indent=2))
+
+
 def part_injection(out: Path, n: int, ds: Dataset) -> None:
     from injection_bench import MARK, TEMPLATES
 
@@ -372,5 +411,7 @@ if __name__ == "__main__":
         part_generation(out, opt("--n", 100), opt("--n-small", 50), vc, ds)
     elif part == "injection":
         part_injection(out, opt("--n", 50), ds)
+    elif part == "regrade":
+        part_regrade(out, vc, ds)
     else:
         raise SystemExit(__doc__)

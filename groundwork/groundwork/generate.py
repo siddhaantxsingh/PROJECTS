@@ -13,8 +13,9 @@ Providers
   Qwen2.5-0.5B-Instruct) run in-process with llama.cpp. Benchmarked in
   docs/benchmarks.md.
 * `GroundedProvider` wraps any provider and enforces the grounding check:
-  sentences that are uncited or not supported by their cited sources are
-  removed; if nothing supported remains the answer becomes an abstention.
+  sentences not supported by their cited sources are removed; an uncited
+  sentence is attributed to the one source that supports it (if any) and is
+  otherwise removed; if nothing supported remains the answer abstains.
 
 Whatever the provider, `check_grounding` validates the answer afterwards:
 every sentence must carry citations, and each citation must point at a
@@ -280,9 +281,9 @@ class GroundedProvider:
     grounding numbers are kept in `usage["raw_grounding"]` so evaluation can
     report the model's own behaviour and the enforced behaviour separately."""
 
-    def __init__(self, inner: Provider, threshold: float = 0.7) -> None:
-        self.inner, self.threshold = inner, threshold
-        self.name = f"{inner.name}+enforced"
+    def __init__(self, inner: Provider, threshold: float = 0.7, attribute_uncited: bool = True) -> None:
+        self.inner, self.threshold, self.attribute_uncited = inner, threshold, attribute_uncited
+        self.name = f"{inner.name}+enforced" + ("" if attribute_uncited else "-strict")
 
     def generate(self, query: str, sources: list[Source]) -> Answer:
         raw = self.inner.generate(query, sources)
@@ -297,11 +298,23 @@ class GroundedProvider:
         valid = {s.n for s in sources}
         by_n = {s.n: s for s in sources}
         segments = []
+        auto = 0
         for i, sent in enumerate(sents):
             ns = [n for n in cites.get(i, []) if n in valid]
+            if not ns and self.attribute_uncited and _CITE.sub("", sent).strip():
+                # Small models often copy a source sentence but omit the [n]
+                # marker. Attribute it to the single best-supporting source;
+                # the same support threshold decides whether it is kept.
+                best = max(sources, key=lambda s: (support_score(sent, s.text), -s.n))
+                if support_score(sent, best.text) >= self.threshold:
+                    body = sent.rstrip()
+                    end = body[-1] if body[-1] in ".!?" else ""
+                    sent, ns = f"{body[:len(body) - len(end)]} [{best.n}]{end}", [best.n]
+                    auto += 1
             if ns and support_score(sent, " ".join(by_n[n].text for n in ns)) >= self.threshold:
                 segments.append((sent, ns))
         usage["dropped_sentences"] = len(sents) - len(segments)
+        usage["auto_attributed_sentences"] = auto
         if not segments:
             return Answer(ABSTAIN, sources, {}, True, self.name, usage)
         text = " ".join(t for t, _ in segments)
