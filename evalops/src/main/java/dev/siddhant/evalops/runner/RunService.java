@@ -47,11 +47,13 @@ public class RunService {
     private final Duration timeout;
     private final int maxAttempts;
     private final Map<Long, Thread> active = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Judge judge;
 
-    public RunService(Store store, MeterRegistry metrics, @Value("${evalops.request-timeout:60s}") Duration timeout,
+    public RunService(Store store, MeterRegistry metrics, Judge judge, @Value("${evalops.request-timeout:60s}") Duration timeout,
                       @Value("${evalops.max-attempts:3}") int maxAttempts) {
         this.store = store;
         this.metrics = metrics;
+        this.judge = judge;
         this.timeout = timeout;
         this.maxAttempts = maxAttempts;
     }
@@ -61,6 +63,7 @@ public class RunService {
     public void resumeInterrupted() {
         for (String st : List.of("running", "queued")) {
             for (Run r : store.runsWithStatus(st)) {
+                if (r.worker()) continue; // worker runs live in the task table; workers pick them up again
                 log.info("resuming run {}", r.id());
                 start(r.id());
             }
@@ -143,14 +146,32 @@ public class RunService {
             }
         }
         double ms = (System.nanoTime() - t0) / 1e6;
-        Map<String, Double> scores = new LinkedHashMap<>();
-        for (String m : run.metrics()) scores.put(m, output == null ? 0.0 : Metrics.ALL.get(m).score(output, it.reference()));
+        Map<String, Double> scores = score(run, it, output);
         metrics.counter("evalops.items", "outcome", output == null ? "error" : cached ? "cached" : "ok").increment();
         return new Result(it.idx(), output, cached ? null : ms, output == null ? error : null, scores, cached, attempts);
     }
 
-    static class Transient extends Exception {
-        Transient(String m) {
+    /** Score an output with every metric of the run; a missing output (an error) scores 0. */
+    public Map<String, Double> score(Run run, Item it, String output) {
+        Map<String, Double> scores = new LinkedHashMap<>();
+        for (String m : run.metrics()) {
+            if (m.equals(Judge.METRIC)) {
+                if (output == null) {
+                    scores.put(m, 0.0);
+                    continue;
+                }
+                Judge.Verdict v = judge.judge(run.judgeSnapshot(), it.input(), it.reference(), output, run.useCache());
+                scores.put(m, v.score());
+                scores.put(Judge.METRIC + "_parsed", v.parsed() ? 1.0 : 0.0);
+            } else {
+                scores.put(m, output == null ? 0.0 : Metrics.ALL.get(m).score(output, it.reference()));
+            }
+        }
+        return scores;
+    }
+
+    public static class Transient extends Exception {
+        public Transient(String m) {
             super(m);
         }
     }

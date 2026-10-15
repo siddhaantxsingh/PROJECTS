@@ -3,12 +3,15 @@ package dev.siddhant.evalops.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.siddhant.evalops.metrics.Metrics;
+import dev.siddhant.evalops.runner.Judge;
 import dev.siddhant.evalops.runner.Reports;
 import dev.siddhant.evalops.runner.RunService;
 import dev.siddhant.evalops.store.Store;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -88,9 +92,22 @@ public class Api {
 
     // ------------------------------------------------------------ runs
 
-    /** {"dataset": "name", "version": 2 (default latest), "target": "name", "metrics": [...], "concurrency": 8, "cache": true} */
+    /**
+     * {"dataset": "name", "version": 2 (default latest), "target": "name", "metrics": [...], "concurrency": 8, "cache": true,
+     * "executor": "local" | "worker", "judge": "target-name" (a /v1/chat/completions target, needed for llm_judge),
+     * "github": {"owner": "o", "repo": "r", "head_sha": "...", "gate": {"baseline": 1, "rules": [...]}}}
+     *
+     * <p>An {@code Idempotency-Key} header makes the request safe to retry: the same key with the same body returns the
+     * run created the first time (200, {@code Idempotent-Replayed: true}); the same key with a different body is 422.
+     */
     @PostMapping("/runs")
-    public ResponseEntity<?> createRun(@RequestBody JsonNode body) {
+    public ResponseEntity<?> createRun(@RequestBody JsonNode body, @RequestHeader(value = "Idempotency-Key", required = false) String idemKey) {
+        String requestSha = Store.sha256(Store.canonical(body));
+        if (idemKey != null) {
+            if (idemKey.isBlank() || idemKey.length() > 200) throw new IllegalArgumentException("Idempotency-Key must be 1..200 characters");
+            var replay = replay(idemKey, requestSha);
+            if (replay != null) return replay;
+        }
         String dsName = body.path("dataset").asText();
         var ds = body.has("version") ? store.dataset(dsName, body.get("version").asInt()) : store.latest(dsName);
         if (ds.isEmpty()) return notFound("dataset");
@@ -98,10 +115,30 @@ public class Api {
         if (target.isEmpty()) return notFound("target");
         List<String> metrics = new ArrayList<>();
         body.path("metrics").forEach(m -> metrics.add(m.asText()));
-        if (metrics.isEmpty()) throw new IllegalArgumentException("metrics required; available: " + Metrics.names());
-        for (String m : metrics) if (!Metrics.ALL.containsKey(m)) throw new IllegalArgumentException("unknown metric " + m + "; available: " + Metrics.names());
+        if (metrics.isEmpty()) throw new IllegalArgumentException("metrics required; available: " + metricNames());
+        for (String m : metrics) {
+            if (!Metrics.ALL.containsKey(m) && !m.equals(Judge.METRIC)) throw new IllegalArgumentException("unknown metric " + m + "; available: " + metricNames());
+        }
+        String judgeSnap = null;
+        if (body.hasNonNull("judge")) {
+            var j = store.target(body.get("judge").asText());
+            if (j.isEmpty()) return notFound("judge target");
+            judgeSnap = Store.canonical(Judge.snapshot(j.get().url(), j.get().model()));
+        }
+        if (metrics.contains(Judge.METRIC) && judgeSnap == null) throw new IllegalArgumentException("llm_judge needs \"judge\": a chat target");
         int conc = body.path("concurrency").asInt(4);
         if (conc < 1 || conc > 256) throw new IllegalArgumentException("concurrency must be 1..256");
+        String executor = body.path("executor").asText("local");
+        if (!executor.equals("local") && !executor.equals("worker")) throw new IllegalArgumentException("executor must be local or worker");
+        String github = null;
+        if (body.hasNonNull("github")) {
+            JsonNode gh = body.get("github");
+            for (String f : List.of("owner", "repo", "head_sha")) {
+                if (!gh.path(f).isTextual() || gh.path(f).asText().isBlank()) throw new IllegalArgumentException("github." + f + " required");
+            }
+            if (!gh.path("head_sha").asText().matches("[0-9a-f]{40}")) throw new IllegalArgumentException("github.head_sha must be a 40-character hex SHA");
+            github = Store.canonical(gh);
+        }
         var t = target.get();
         ObjectNode snap = Store.JSON.createObjectNode().put("url", t.url()).put("model", t.model());
         try {
@@ -109,9 +146,47 @@ public class Api {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-        long id = store.createRun(ds.get().id(), t.id(), Store.canonical(snap), metrics, conc, body.path("cache").asBoolean(true));
-        runs.start(id);
+        long id;
+        try {
+            id = store.createRun(new Store.NewRun(ds.get().id(), t.id(), Store.canonical(snap), metrics, conc, body.path("cache").asBoolean(true), executor,
+                    judgeSnap, github, idemKey, requestSha));
+        } catch (DataIntegrityViolationException | CannotAcquireLockException e) {
+            // a concurrent request with the same key committed first; nothing of ours was written
+            for (int i = 0; i < 50; i++) {
+                var replay = replay(idemKey, requestSha);
+                if (replay != null) return replay;
+                sleep(20);
+            }
+            throw e;
+        }
+        if (!executor.equals("worker")) runs.start(id);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("run", id, "dataset_version", ds.get().version()));
+    }
+
+    private ResponseEntity<?> replay(String idemKey, String requestSha) {
+        if (idemKey == null) return null;
+        var k = store.idempotencyKey(idemKey);
+        if (k.isEmpty()) return null;
+        if (!k.get().requestSha().equals(requestSha)) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", "Idempotency-Key reused with a different request"));
+        }
+        var run = store.run(k.get().runId()).orElseThrow();
+        int version = store.dataset(run.datasetId()).orElseThrow().version();
+        return ResponseEntity.ok().header("Idempotent-Replayed", "true").body(Map.of("run", run.id(), "dataset_version", version));
+    }
+
+    static List<String> metricNames() {
+        List<String> n = new ArrayList<>(Metrics.names());
+        n.add(Judge.METRIC);
+        return n.stream().sorted().toList();
+    }
+
+    static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @GetMapping("/runs")
