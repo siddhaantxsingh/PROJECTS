@@ -1,6 +1,6 @@
 # Testing
 
-`cargo test --release` runs 19 tests in about 10 s.
+`cargo test --release` runs 28 tests (plus one opt-in test that needs the real model) in about 30 s.
 
 ## Against an independent reference
 
@@ -61,3 +61,15 @@ Three mutants survived the first version of the suite:
 * the preemption one above;
 * the prefix hash ignoring its parent: caught after adding the different-prefix and different-position cases;
 * sampling ignoring the per-request RNG: caught after adding the seed test.
+
+## Pretrained models (GGUF)
+
+`tests/gguf.rs` (8 tests in CI, 1 opt-in). Details and the full-model validation results are in [pretrained.md](pretrained.md).
+
+* **`tiny_llama_matches_numpy_reference`, `tiny_qwen2_with_biases_and_neox_rope_matches_numpy_reference`.** Tiny GGUF files written by the `gguf` Python package (random weights in F32/F16/BF16/Q8_0). Token ids, the argmax at every position and the last-position logits (within 2e-4 relative) match the float64 NumPy reference; 16 greedy tokens through the batched, paged engine (4-token blocks, NaN-poisoned) equal the reference's.
+* **`tokenizer_matches_hf_tokenizers_and_llama_cpp`.** 25 varied texts per tokenizer: ids equal Hugging Face `tokenizers` and llama.cpp; decoding round-trips.
+* **`chat_template_matches_jinja`.** ChatML rendering equals jinja2 for 3 conversations per template (SmolLM2's real template, and a Qwen-style template whose default-system literal must be told apart from the one that continues with the user's system message; the first version of the code failed this).
+* **`end_of_sequence_token_stops_generation`.** The EOS token ends a request and adds no text; `ignore_eos` keeps going.
+* **`reader_parses_every_metadata_and_tensor_type`, `reader_rejects_corrupt_files_without_panicking`, `unsupported_files_give_clear_errors`.** A GGUF built in the test with all 13 metadata types, nested arrays, 64-byte alignment and four tensor types; every truncated prefix is rejected; bad magic/version and absurd lengths fail fast.
+* **Opt-in `smollm2_tokenizer_and_chat`** (`LLM_GGUF_MODEL=... cargo test --release --test gguf -- --ignored`): real-model token ids equal llama.cpp's, the chat prompt equals jinja2's rendering, and the answer to "What is the capital of France?" contains "Paris" and ends at `<|im_end|>`. Passed here: `docs/evidence/2026-10-14/optin_smollm2_test.log`.
+* **`validate/compare.py`** (not part of `cargo test`; needs the model, numpy, gguf, tokenizers and llama-cpp-python): the full-model logits, tokenizer, greedy and perplexity comparisons.

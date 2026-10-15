@@ -2,6 +2,8 @@
 
 ## The model
 
+This section is about the small model trained here. The engine also runs pretrained GGUF models; see [pretrained.md](pretrained.md).
+
 No pretrained weights could be downloaded here: huggingface.co and the PyTorch index are unreachable. So the model was trained for this project:
 
 * **Architecture.** A Llama-architecture decoder (`train/model.py`, JAX on CPU): RMSNorm, rotary position embeddings, grouped-query attention (8 query heads, 2 KV heads), a SwiGLU MLP, and tied input/output embeddings.
@@ -16,9 +18,10 @@ No pretrained weights could be downloaded here: huggingface.co and the PyTorch i
 
 | Module | Role |
 |---|---|
-| `tokenizer.rs` | the same BPE as `train/tokenizer.py` (tested against its output on held-out text) |
+| `gguf.rs` | GGUF reader and dequantisation (F32, F16, BF16, Q8_0) |
+| `tokenizer.rs` | the same BPE as `train/tokenizer.py` (tested against its output on held-out text), and GPT-2 style byte-level BPE from GGUF with special tokens and ChatML templates |
 | `ops.rs` | AVX2/FMA dot products and matmuls (f32 and int8 weights) with a portable fallback |
-| `model.rs` | weight loading; the batched forward pass over a flat list of tokens from many sequences |
+| `model.rs` | weight loading (LLMW or GGUF `llama`/`qwen2`); the batched forward pass over a flat list of tokens from many sequences |
 | `kv.rs` | paged KV cache and block pool with reference counts and prefix caching |
 | `engine.rs` | scheduler: continuous batching, chunked prefill, preemption, sampling, stop strings, streaming text |
 | `sampler.rs` | greedy, temperature, top-k, top-p, per-request seeded RNG |
