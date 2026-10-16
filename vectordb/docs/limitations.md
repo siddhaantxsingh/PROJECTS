@@ -7,7 +7,7 @@
 * **HNSW levels after restart.** The level RNG is reseeded from `seed ^ lsn` on recovery, so after a restart new nodes get different levels than an uninterrupted run would give. Results remain valid; they are not bit-identical to an uninterrupted run.
 * **Filter planning is a fixed threshold.** Below 2 % estimated selectivity an exact scan runs; above it, HNSW with `ef / selectivity`. At ≈ 2–10 % selectivity filtered HNSW can be slower than the scan (see benchmarks). Selectivity is estimated from 512 samples, so it is noisy for rare values.
 * **Metadata evaluation is slow-ish.** Metadata is a `BTreeMap` per slot; a filter costs a map lookup per candidate (≈ 100–200 ns), which dominates the exact-scan fallback.
-* **PQ** uses a single training run with fixed k-means++ seed; no OPQ rotation, no IVF coarse quantiser, so PQ search is a full ADC scan.
+* **PQ** uses a single training run with fixed k-means++ seed; no OPQ rotation, no IVF coarse quantiser, so PQ search is a full ADC scan. The raw f32 vectors stay in memory for the exact rerank (and for HNSW), so PQ codes (3.3 MB for 100k × 128) are added to the 51.2 MB of vectors; the 15.4× figure compares codes with vectors and is not a reduction in total memory.
 * **No authentication or TLS** (see [security.md](security.md)). No replication, sharding or backups beyond copying a snapshot.
 * **Benchmarks are synthetic** (two generated datasets) and single-machine; no SIFT/GIST/real embedding datasets were available offline.
 * **Advisory directory lock** is not reliable on some network filesystems.

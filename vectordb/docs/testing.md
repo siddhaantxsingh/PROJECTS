@@ -9,6 +9,10 @@ Run everything with `cargo test` (the test profile builds at `opt-level = 2`, so
 | `tests/api.rs` | 2 | a real axum + tonic server on ephemeral ports: REST lifecycle and error codes (409 conflicting create, 422 bad name / wrong dimension, 404s, 204 deletes), filters, `/metrics`, snapshot, drop; gRPC round trip, `INVALID_ARGUMENT` for bad filter JSON, a second registry on a live data directory is refused, graceful shutdown and **restart recovery** |
 | `tests/audit.rs` | 7 | regression tests for the audit findings (see [audit.md](audit.md)) |
 | `tests/audit_pq_rerank.rs` | 1 | unbounded PQ `rerank` (separate binary: before the fix it aborted the process) |
+| `tests/wal_faults.rs` | 4 | WAL I/O fault injection at the record write, the fsync and the rollback (see below) |
+| `tests/wal_efbig.rs` | 1 | a real kernel write error (EFBIG from `RLIMIT_FSIZE`) |
+
+Total: 41 tests.
 
 Logs of the runs recorded in this repository are in `test-logs/`.
 

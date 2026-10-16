@@ -24,8 +24,8 @@ The reviewer reported these as unconfirmed. Status after this pass:
 
 | # | Issue | Status |
 |---|---|---|
-| S1 | A failed `fsync` left the record in the file. The client saw an error, but the write was replayed after a restart. | **Fixed.** On any append failure the file is cut back to the last complete record. If the rollback itself fails, the log refuses further writes. No fault-injection test (needs an I/O shim). |
-| S2 | A short write (ENOSPC) left a fragment that later appends landed behind. | **Fixed** by the same rollback. Untested, as for S1. |
+| S1 | A failed `fsync` left the record in the file. The client saw an error, but the write was replayed after a restart. | **Fixed.** On any append failure the file is cut back to the last complete record. If the rollback itself fails, the log refuses further writes. Tested since 2026-10-15 by fault injection (`tests/wal_faults.rs`) and a real kernel EFBIG (`tests/wal_efbig.rs`); see [testing.md](testing.md#wal-io-fault-injection). |
+| S2 | A short write (ENOSPC) left a fragment that later appends landed behind. | **Fixed** by the same rollback. Short writes are tested (injected, and a real EFBIG from `RLIMIT_FSIZE`); ENOSPC itself was not produced. |
 | S3 | `snapshot`, `train_pq` and `rebuild` hold the WAL mutex for the whole operation; `train_pq` and `rebuild` also hold the index write lock, so they block searches. | **Open; documented** in [limitations.md](limitations.md). The deadlock part (#1) is fixed. |
 | S4 | The data directory was not fsynced after a collection directory was created. | **Fixed:** the parent directory is fsynced on create. |
 | S5 | A REST batch upsert with one invalid point left the earlier points applied. | **Fixed:** `Collection::upsert_batch` validates every point before writing any, and names the bad point in the error. Test: `batch_upsert_is_all_or_nothing_on_validation_errors`. An I/O error part-way through can still leave a durable prefix. |
