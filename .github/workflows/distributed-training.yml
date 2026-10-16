@@ -19,3 +19,15 @@ jobs:
       - run: |
           python -m dtrain.launch --nproc 2 --max-restarts 1 -- python -m dtrain.train --mode ddp --steps 6 \
             --ckpt-dir /tmp/ck --ckpt-every 2 --resume --fail-at-step 3
+  torch-crosscheck:
+    # dtrain vs torch.distributed (gloo, CPU). CPU-only wheel (~200 MB) from the PyTorch index, reachable from GitHub.
+    runs-on: ubuntu-24.04
+    defaults:
+      run: { working-directory: distributed-training }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e '.[dev]' && pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: python -c "import torch, torch.distributed as d; print(torch.__version__, d.is_gloo_available())"
+      - run: python -m pytest -q -rs tests/test_torch_crosscheck.py

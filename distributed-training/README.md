@@ -12,11 +12,12 @@
 Training resumes bit-identically after a crash.
 
 **Status:**
-- **Done:** verified on one 4-vCPU machine; 36 tests pass.
+- **Done:**
+  - verified on one 4-vCPU machine; 36 tests pass;
+  - cross-checked against `torch.distributed` (gloo, CPU): 8 more tests run when PyTorch is installed.
 - **Not done:**
-  - CPU only (no GPU here);
-  - no PyTorch (its CPU wheels were unreachable);
-  - multi-host is untested.
+  - CPU only. There is no GPU here. The GPU/NCCL scripts for the owner are written but BLOCKED ([OWNER_ACTIONS](docs/OWNER_ACTIONS.md)).
+  - Multi-host is untested.
 
 See [limitations](docs/limitations.md).
 
@@ -31,6 +32,9 @@ See [limitations](docs/limitations.md).
 | Ring all-reduce, 64 MiB, 4 ranks | 0.76 GB/s bus bandwidth, 71 % of OpenMPI 4.1 on the same machine |
 | Small messages | 10–50× OpenMPI's latency (Python overhead) |
 | Overlapping all-reduce with backward | no gain (GIL contention), reported as a negative result |
+| vs PyTorch DDP (gloo, CPU), same model/data/seed | gradients equal to ≤ 1.6e-15 (float64), ≤ 1.4e-6 (float32); ring all-reduce bit-identical to gloo at 2 ranks |
+| vs `ZeroRedundancyOptimizer` | parameters equal to ≤ 3.9e-14 after 50 steps (float64); dtrain shards state evenly, torch by whole tensors |
+| Throughput vs torch DDP (CPU, heavily loaded host) | torch 2.1–2.8× faster per step, mostly from compute kernels ([details](docs/torch_crosscheck.md)) |
 
 ## Quick start
 
@@ -43,6 +47,8 @@ python -m dtrain.launch --nproc 4 --max-restarts 2 -- python -m dtrain.train --m
     --steps 200 --ckpt-dir ckpt --ckpt-every 20 --resume --fail-at-step 50   # crash, restart, resume
 ```
 
+PyTorch cross-check (optional, needs `torch`; a CPU build is enough): `python -m pytest tests/test_torch_crosscheck.py` and `python benchmarks/run_torch_crosscheck.py --out <dir>`.
+
 Benchmarks: `benchmarks/allreduce_bench.py` (plus an `mpirun` baseline), `benchmarks/scaling.sh`, and `benchmarks/report.py <date>`. The commands are at the top of each file.
 
 ## Documentation
@@ -52,3 +58,6 @@ Benchmarks: `benchmarks/allreduce_bench.py` (plus an `mpirun` baseline), `benchm
 - [Benchmarks](docs/benchmarks.md)
 - [Limitations](docs/limitations.md)
 - [Requirements matrix](docs/requirements.md)
+- [Cross-check against PyTorch](docs/torch_crosscheck.md) ([tables](docs/torch_crosscheck_tables.md))
+- [Owner actions (GPU)](docs/OWNER_ACTIONS.md)
+- [Scorecard](docs/scorecard.md)
