@@ -17,8 +17,8 @@ Evidence for the 2026-10-15 rows: `results/2026-10-15/regression.json` and `regr
 | RAL: register model generated from one description | VERIFIED | `regs/periph_soc.json` → `tools/reggen.py` → `tb/ral_model.py` (pyuvm `uvm_reg_block`/`uvm_reg`/`uvm_reg_field`), `sw/periph_soc_regs.h`, `docs/register_map.md`; CI runs `reggen.py --check` |
 | RAL: reset-value, bit-bash, frontdoor/backdoor mirror sequences | VERIFIED | `RalRegisterTest`: 367 register checks per run, passes on 10 seeds. pyuvm 5.0 has no predictor, no backdoor and no built-in sequences; `tb/ral.py` adds small replacements (see limitations) |
 | RAL catches the W1C bug | VERIFIED | `--ral-bugs`: with the lockstep scoreboard off and SVA non-fatal, `RalW1cTest` alone fails on `BUG_UART_W1C` ("W1C of bit 2: uart_irq_st read 0x3c, mirror 0x38") and `BUG_GPIO_W1C` |
-| Native SystemVerilog UVM environment | see `docs/sv_uvm.md` | `sv_uvm/` (agent, driver, monitor, scoreboard, coverage, 2 sequences, 2 tests) on Verilator 5.052 + Accellera UVM 2020.3.1 |
+| Native SystemVerilog UVM environment | VERIFIED (on Verilator only) | `sv_uvm/` (agent, driver, monitor, scoreboard, coverage, 2 sequences, 2 tests). Verilator 5.052 + Accellera UVM 2020.3.1: both tests UVM_ERROR 0 / UVM_FATAL 0 locally (`docs/evidence/2026-10-15/sv_uvm_clean/`) and in CI run 38822290359. With `+define+BUG_DECODE`: UVM_ERROR 26 (`sv_uvm_bug_decode/`) |
 | SystemVerilog UVM on a commercial simulator | BLOCKED | no licence here; commands in `docs/OWNER_ACTIONS.md` |
 | CPU-level SoC (core + peripherals) verification | NOT IMPLEMENTED | — |
 | Formal verification of the SVA | NOT IMPLEMENTED | properties are checked in simulation only |
-| CI | see README | `.github/workflows/uvm-soc-verification.yml` |
+| CI | VERIFIED | `.github/workflows/uvm-soc-verification.yml`: run 38822290359 green (regression job with SVA/RAL checks, and the sv-uvm job) |
