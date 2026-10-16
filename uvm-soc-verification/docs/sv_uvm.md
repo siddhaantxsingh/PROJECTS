@@ -38,7 +38,7 @@ Logs: `docs/evidence/2026-10-15/sv_uvm_clean/`.
 
 The build took 1089 s wall time (C++ compile 1028 s) on a shared 4-vCPU machine with load average about 20–50 from other agents. Each simulation takes well under a second.
 
-Failing-first run (`+define+BUG_DECODE`): see the section below.
+**Failing-first run** (`run_verilator.sh <out> +define+BUG_DECODE`, logs in `docs/evidence/2026-10-15/sv_uvm_bug_decode/`): `soc_decode_test` ends with `UVM_ERROR : 26`. The scoreboard reports e.g. `PSLVERR=0 for R addr=00000204 ... (expected 1)`, and the bound SVA prints `SVA_FAIL SOC_DECODE_HOLE_ERRORS`. `soc_reg_test` stays clean, as expected: it never uses the decoder holes. The script exits non-zero.
 
 ## Limits
 
