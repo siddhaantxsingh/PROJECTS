@@ -19,4 +19,4 @@
 | GitHub checks with a real GitHub App | BLOCKED (owner credentials) | [OWNER_ACTIONS.md](OWNER_ACTIONS.md) |
 | Chat-format targets, multi-turn, sandboxed code execution | NOT IMPLEMENTED | limitations |
 | Auth, multi-tenancy (including worker endpoints) | NOT IMPLEMENTED | limitations |
-| CI | VERIFIED | `.github/workflows/evalops.yml` (run 38562292362 green; re-checked after this change, see README) |
+| CI | VERIFIED | `.github/workflows/evalops.yml` (run 38562292362 green; after the outbox/worker/judge/checks change: runs 38781917424 and 38782978243 green) |
