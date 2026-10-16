@@ -32,7 +32,6 @@ Every kernel runs on the emulator and is compared with a double-precision refere
 | softmax | 1×1 … 64×4096, values σ = 10, one 3·10³⁸, one −inf, all −inf row → NaN | 10⁻⁵ relative |
 | LayerNorm | 1×1 … 8×768, 4×4096, mean 10⁴ | 10⁻⁴ + input-rounding term |
 | attention D = 32, 64 | N = 1, 37, 130, 200; causal and not; BH up to 3 | 2·10⁻⁵ absolute |
-
 | fp16 conversion | all 65 536 fp16 values; 2 M random floats and edge cases | exact; compared with GCC's `_Float16` |
 | `mma.m16n8k16` probe (one warp, fragments gathered from the PTX tables) | 16×16×8, small integers | exact |
 | tensor-core GEMM (`hgemm_mma`) | 1×1×1, 16×8×16, 128×128×32, 129×130×17, 64×300×64 (α = 0.5, β = 2), 256³ (β = 1), 5×257×3 (α = −1), 200×136×40, 33×72×8 (β = 0.5), 130×264×520 | (K + 2)·2⁻²³·Σ\|aᵢₖbₖⱼ\| (+ β term), against a double reference on the fp16-rounded inputs |

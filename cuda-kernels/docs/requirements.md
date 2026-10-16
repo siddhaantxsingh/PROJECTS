@@ -10,7 +10,7 @@ Evidence logs from 2026-10-15 are in [evidence/2026-10-15/](evidence/2026-10-15/
 | Emulator model of the mma / ldmatrix fragment layouts (PTX ISA m16n8k16 .f16) | VERIFIED against the PTX ISA tables (by construction + exact-integer probe); hardware confirmation BLOCKED | `include/kc/simt_emu.h`; `mma_probe` check; the GPU benchmark repeats the probe on hardware |
 | Tensor-core kernels compile to HMMA for sm_80, sm_89, sm_90 | VERIFIED | `make ptx` → `results/sass.json`: 32 × `HMMA.16816.F32` and 12 `LDSM` per kernel per arch; `evidence/2026-10-15/sass_hgemm_excerpt.txt`; 122–126 registers, 0 stack, 0 spills (`evidence/2026-10-15/device_build.log`) |
 | fp16 conversion helpers | VERIFIED | all 65 536 fp16 values round-trip; float→fp16 matches GCC `_Float16` on 2 M random floats + edge cases |
-| Backward passes: softmax and LayerNorm (dx, dγ, dβ) | VERIFIED (functional, on emulator) | `include/kc/backward.cuh`; 33 checks vs analytic double references, and those references vs central finite differences |
+| Backward passes: softmax and LayerNorm (dx, dγ, dβ) | VERIFIED (functional, on emulator) | `include/kc/backward.cuh`; 32 checks (10 softmax, 22 LayerNorm) vs analytic double references, and those references vs central finite differences |
 | Kernels compile as real CUDA for current GPUs | VERIFIED | clang 18 + ptxas 12.9, sm_80, sm_89 and sm_90, 23 kernels, no spills (`make ptx`, CI) |
 | sm_89 (RTX 40xx) build target | VERIFIED (compiles and links) | `make ptx` and `make gpu-bench CUDA_ARCH=sm_89` (`evidence/2026-10-15/gpu_bench_build_sm89.log`) |
 | Resource usage and occupancy | VERIFIED (ptxas + calculator) | `results/resources.json`, `docs/analysis.md` |
