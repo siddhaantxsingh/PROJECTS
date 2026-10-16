@@ -1,4 +1,16 @@
-# HANDOFF — 15-project engineering portfolio
+# HANDOFF — 20-project engineering portfolio
+
+> **Update, 2026-10-16: the 20-project audit and upgrade is finished.** The owner's master directive covered these 15 projects plus RaftKV, LSM Engine, TANDEM, EMBER and VerifyCloud.
+>
+> * Every project got a baseline, defect fixes with failing-first tests, new core features, new tests, honest benchmarks and an owner-actions file.
+> * All of it is pushed to branch `ccr-a6e6c567-y4w7k8`, with green CI.
+> * Current state lives in `master/`:
+>   * `SCORECARD.md`: scores, evidence, gaps and supported resume bullets;
+>   * `RESUME_EVIDENCE.md`: a claim-by-claim check of the three resumes, including the Tata Steel entry;
+>   * `OWNER_ACTION_PLAN_20_PROJECTS.pdf`: owner-only steps;
+>   * `MASTER_*.md`: progress, tasks, decisions, blockers, verification and budget.
+> * The sections below are the history up to 2026-10-14. Where a number in them differs from `SCORECARD.md`, the scorecard is current. For example, InferX's 1.68× was not reproduced with a pretrained model, and the LLM engine now runs SmolLM2.
+
 
 > **Update, 2026-10-14 (Claude Code session): all 15 projects are done** in this monorepo (`siddhaantxsingh/PROJECTS`, branch `ccr-a6e6c567-y4w7k8`), one top-level directory each. The latest GitHub Actions run of every project workflow is green. The three earlier blockers were all resolved:
 >

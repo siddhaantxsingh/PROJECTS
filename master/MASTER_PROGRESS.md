@@ -23,4 +23,11 @@ Started 2026-10-14. The directive is `MASTER_20_PROJECTS_PROMPT.md`, supplied by
 | 2026-10-14 | The 5 standalone repos cloned; the baseline and upgrade audits started |
 | 2026-10-14 | Second round on PROJECTS started: Industrial Edge TinyML and security, LLM engine with pretrained weights, real embeddings and LLM for Groundwork and Campus, RTL-to-GDSII for the accelerator |
 
+| 2026-10-14 → 16 | All 20 audits and upgrades finished; each is pushed to its branch with green CI. The work was interrupted by 6 usage-limit resets and several worker restarts; every agent was resumed from its saved state |
+| 2026-10-16 | SCORECARD.md, RESUME_EVIDENCE.md and OWNER_ACTION_PLAN_20_PROJECTS.pdf finished |
+
 See `SCORECARD.md` for the final per-project state.
+
+## Resume point for a future session
+
+Nothing is in progress. To continue: read `SCORECARD.md` (the "Main gap" column) and `MASTER_BLOCKERS.md`, then pick owner-unblocked items. The first GPU results from the owner go into `cuda-kernels/results/gpu/`, `nebula-gpu-cloud/docs/evidence/owner-gpu-*` and `distributed-training/benchmarks/results/*/gpu/`.

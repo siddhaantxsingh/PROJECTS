@@ -1,4 +1,4 @@
-# Resume evidence review (draft, 2026-10-14)
+# Resume evidence review (2026-10-16)
 
 This file checks every claim in the three resumes the owner supplied (SWE, ML and Electronics, files named `Siddhant_*_Final-1_*.pdf`) against evidence that exists in the owner's repositories. It does **not** judge claims that only the owner can prove (grades, ranks, contest results, employment). Those are listed with the document that would prove them.
 
@@ -9,7 +9,7 @@ Status labels:
 * **NOT SUPPORTED BY ANY REPO:** no repository I can access contains evidence. The claim may still be true, but it is unproven and risky in an interview.
 * **OWNER MUST VERIFY:** only an external record can prove it (offer letter, transcript, contest profile, etc.).
 
-Sections marked *(updated when the audit finishes)* depend on audits that are still running.
+All audits finished on 2026-10-16; every row below reflects their final evidence.
 
 ---
 

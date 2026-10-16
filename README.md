@@ -1,36 +1,38 @@
 # Projects
 
-A portfolio of 15 production-oriented engineering projects. Each project lives in its own top-level directory, with its own README, documentation (`docs/`: design, testing, benchmarks, limitations, requirements matrix), tests and CI workflow (`.github/workflows/<project>.yml`, triggered by changes under that directory). **The latest CI run of every workflow is green.**
+A portfolio of 15 engineering projects, one per top-level directory. Each has its own README, documentation (`docs/`: design, testing, benchmarks, limitations, requirements matrix, scorecard, owner actions), tests and CI workflow (`.github/workflows/<project>.yml`, triggered by changes under that directory). **The latest CI run of every workflow is green** (run ids in [master/MASTER_VERIFICATION.md](master/MASTER_VERIFICATION.md)).
 
-| Project | Directory | Stack | Status |
+Five more projects live in their own repositories and were audited at the same time: [RAFT-KV](https://github.com/siddhaantxsingh/RAFT-KV), [LSM_ENGINE](https://github.com/siddhaantxsingh/LSM_ENGINE), [TANDEM](https://github.com/siddhaantxsingh/TANDEM-Collaborative-Editor), [EMBER](https://github.com/siddhaantxsingh/EMBER-Compiler) and [VerifyCloud](https://github.com/siddhaantxsingh/VerifyCloud). Their work is on branch `ccr-a6e6c567-y4w7k8` in each repo.
+
+**Start here:**
+
+* [master/SCORECARD.md](master/SCORECARD.md): all 20 projects, four scores each, evidence, gaps and resume bullets backed by evidence.
+* [master/RESUME_EVIDENCE.md](master/RESUME_EVIDENCE.md): every resume claim checked against the code.
+* [master/OWNER_ACTION_PLAN_20_PROJECTS.pdf](master/OWNER_ACTION_PLAN_20_PROJECTS.pdf): steps only the owner can do (RTX 4060, boards, accounts, deployment).
+
+| Project | Directory | Stack | Status (2026-10-16) |
 |---|---|---|---|
-| **Groundwork**: RAG + evaluation engine | [`groundwork/`](groundwork/) | Python, FastAPI, PostgreSQL + pgvector, Redis | Done. 72 tests pass; benchmarks and audit done. |
-| **Campus AI OS**: course knowledge platform | [`campus-ai-os/`](campus-ai-os/) | FastAPI backend (uses Groundwork), React + Vite | Done as a vertical slice. 39 API tests and 1 browser E2E test pass; audit done. |
-| **vectordb**: ANN search engine | [`vectordb/`](vectordb/) | Rust: HNSW, PQ, SIMD, WAL + snapshots, REST + gRPC | Done. 36 tests pass; benchmarked against FAISS; audit done. |
-| RISC-V CPU | [`riscv-cpu/`](riscv-cpu/) | SystemVerilog, Verilator, C++ | Done: riscv-tests 64/64, random tests match Spike, CoreMark 2.87/MHz |
-| Distributed training | [`distributed-training/`](distributed-training/) | Python/NumPy, TCP | Done (CPU): DDP + ZeRO-1 + elastic restart, 36 tests |
-| Industrial Edge | [`industrial-edge/`](industrial-edge/) | Go (stdlib), Modbus TCP, MQTT | Done: no loss across broker outage + kill -9; 10k records/s |
-| EdgeFleet | [`edgefleet/`](edgefleet/) | Go (stdlib), Ed25519 | Done: signed A/B OTA, staged rollouts; bad release halted after 15/2,000 devices |
-| INT8/FP8 accelerator | [`int8-fp8-accelerator/`](int8-fp8-accelerator/) | SystemVerilog, cocotb | Done (simulation): bit-exact INT8/FP8 GEMM, exact FP8 accumulation |
-| Nebula GPU cloud | [`nebula-gpu-cloud/`](nebula-gpu-cloud/) | Rust (axum, tokio) | Done (simulated GPUs): topology-aware gang scheduling, fair share, backfill, preemption; crash-safe state |
-| CUDA kernels | [`cuda-kernels/`](cuda-kernels/) | CUDA C++, clang + ptxas, CPU SIMT emulator | Done (no GPU: functional on emulator, compiled for sm_80/sm_90; GPU timing BLOCKED) |
-| LLM inference engine | [`llm-inference-engine/`](llm-inference-engine/) | Rust (CPU, AVX2), JAX training | Done: paged KV, continuous batching (3.1×), prefix cache, int8, speculative decoding; model trained here |
-| InferX | [`inferx/`](inferx/) | Go (stdlib) | Done: KV-cache-aware routing (1.68× vs round robin on real engines), admission control, autoscaling of engine processes |
-| MCP Fabric | [`mcp-fabric/`](mcp-fabric/) | Java 21, Spring Boot 3 | Done: MCP gateway federating stdio/HTTP servers; authz, schema validation, rate limits, circuit breakers, hash-chained audit |
-| EvalOps | [`evalops/`](evalops/) | Java 21, Spring Boot 3, H2 | Done: versioned datasets, eval runs, paired bootstrap comparisons, CI gates; evaluates llm-inference-engine |
-| UVM SoC verification | [`uvm-soc-verification/`](uvm-soc-verification/) | SystemVerilog RTL, pyuvm, cocotb, Verilator | Done: 100 % functional coverage, 12/12 injected bugs caught |
+| **Groundwork**: RAG + evaluation | [`groundwork/`](groundwork/) | Python, FastAPI, PostgreSQL + pgvector | 81 tests. Real nomic embeddings: hybrid retrieval NDCG@10 0.70 vs BM25 0.63; local LLM (Qwen2.5-0.5B) with grounding enforcement; injection defences |
+| **Campus AI OS** | [`campus-ai-os/`](campus-ai-os/) | FastAPI, React | LLM answers with citations end to end (local model); Docker image built and smoke-tested |
+| **Vector DB** | [`vectordb/`](vectordb/) | Rust: HNSW, PQ, SIMD | Benchmarked against FAISS; WAL fault injection; Docker image tested in CI |
+| **RISC-V CPU** | [`riscv-cpu/`](riscv-cpu/) | SystemVerilog, Verilator | RV32IM 5-stage; riscv-tests 64/64; 400/400 random programs match Spike; I/D caches; sky130 timing (reduced flow); no FPGA run |
+| **Distributed training** | [`distributed-training/`](distributed-training/) | Python/NumPy, TCP | DDP + ZeRO-1 matching PyTorch to 1e-15 (cross-check in CI); GPU BLOCKED |
+| **Industrial Edge** | [`industrial-edge/`](industrial-edge/) | Go, C | INT8 fault classifier bit-exact on Cortex-M (QEMU), synthetic data; MQTT over TLS/mTLS; Docker |
+| **EdgeFleet** | [`edgefleet/`](edgefleet/) | Go, Ed25519 | Signed A/B OTA, staged rollouts, release-key rotation |
+| **INT8/FP8 accelerator** | [`int8-fp8-accelerator/`](int8-fp8-accelerator/) | SystemVerilog, OpenROAD | Bit-exact GEMM; PE taken to GDS on sky130 at 100 MHz; top level synthesised and placed |
+| **Nebula GPU cloud** | [`nebula-gpu-cloud/`](nebula-gpu-cloud/) | Rust | Gang scheduler, crash-safe journal, hardened Docker job runtime; real GPU BLOCKED |
+| **CUDA kernels** | [`cuda-kernels/`](cuda-kernels/) | CUDA C++, PTX | 150 emulator checks; tensor-core GEMM; SASS for sm_80/89/90; GPU timing BLOCKED |
+| **LLM inference engine** | [`llm-inference-engine/`](llm-inference-engine/) | Rust | Runs pretrained SmolLM2-135M; matches llama.cpp; batching 3.1×; CPU only |
+| **InferX** | [`inferx/`](inferx/) | Go | KV-aware routing and autoscaling; with SmolLM2 the routing gain is within noise |
+| **MCP Fabric** | [`mcp-fabric/`](mcp-fabric/) | Java 21, Spring Boot | OAuth 2.1 resource server, approvals, no token passthrough, rug-pull pinning, TLS |
+| **EvalOps** | [`evalops/`](evalops/) | Java 21, Python | Outbox, idempotency, leased Python workers, validated LLM judge, GitHub checks (fake API) |
+| **UVM SoC verification** | [`uvm-soc-verification/`](uvm-soc-verification/) | SystemVerilog, pyuvm, SV-UVM | SVA, RAL, native SV-UVM on Verilator 5.052; 12/12 bugs caught |
 
-The project statuses use these terms:
+Statuses are VERIFIED / IMPLEMENTED BUT UNVERIFIED / PARTIAL / BLOCKED / NOT IMPLEMENTED. Each project's `docs/requirements.md` gives the status per requirement, and `docs/limitations.md` lists what is known not to work.
 
-- **VERIFIED:** tested, with evidence in the repository.
-- **IMPLEMENTED BUT UNVERIFIED**
-- **PARTIALLY IMPLEMENTED**
-- **BLOCKED:** cannot be done in this environment (e.g. no GPU).
-- **NOT IMPLEMENTED**
+Nothing is deployed. No GPU, FPGA or real MCU board was available, so those results are BLOCKED; the owner action plan gives the exact steps to run them.
 
-Each project's `docs/requirements.md` gives the status per requirement, and its `docs/limitations.md` lists what is known not to work. None of the projects is deployed. The Docker images have not been built. No GPU was available, so GPU execution is BLOCKED everywhere it appears (`cuda-kernels`, `llm-inference-engine`, `inferx`, `nebula-gpu-cloud`); each says what was done instead.
-
-See [HANDOFF.md](HANDOFF.md) for the state of the work and how each project was verified.
+See [HANDOFF.md](HANDOFF.md) for the history of the work.
 
 ## Running the tests
 

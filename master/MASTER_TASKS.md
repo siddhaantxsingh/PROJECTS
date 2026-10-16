@@ -1,32 +1,40 @@
-# Tasks
+# Tasks (final state, 2026-10-16)
 
-Legend: [x] done · [~] in progress · [ ] not started · [B] blocked (see MASTER_BLOCKERS.md)
+Legend: [x] done and pushed with green CI · [B] blocked on the owner (see MASTER_BLOCKERS.md)
 
-## Standalone repos (baseline + upgrade loop, on branch ccr-a6e6c567-y4w7k8)
-- [~] RaftKV: membership reconfiguration, inter-process partition chaos, disk-fault injection, root CI
-- [~] LSM Engine: crash-point testing, model-based tests, corruption, MVCC, C ABI safety, RocksDB comparison, CI
-- [~] TANDEM: multi-node sync, offline convergence, persistence crash tests, session revalidation, load test
-- [~] EMBER: scoped LLVM backend, optimization equivalence, GC stress, fuzzing and sanitizers
-- [~] VerifyCloud: Compose stack, MinIO, sandbox, lease fencing, adversarial RTL, GitHub checks against a fake API, root CI
+## Standalone repos (branch ccr-a6e6c567-y4w7k8 in each)
+- [x] RaftKV: membership changes, network-fault chaos between processes, disk-fault tests, WAL/fsync fixes, root CI
+- [x] LSM Engine: 13 defects fixed (2 critical), crash and corruption sweeps, model test, C ABI (ASan/valgrind/Miri), RocksDB comparison, CI
+- [x] TANDEM: ack-without-persist bug, cross-node session revocation, offline property test, kill -9 crash test, load test
+- [x] EMBER: LLVM 18 ORC JIT backend, differential testing, GC stress under ASan, libFuzzer
+- [x] VerifyCloud: CI at root, real MinIO, Compose stack, gVisor, lease fencing with real processes, adversarial RTL tests
 
-## PROJECTS second round
-- [~] Industrial Edge: TinyML INT8 on Cortex-M (QEMU), predictive-maintenance evaluation, drift detection, MQTT over TLS with auth, Docker
-- [~] LLM inference engine: GGUF loading, SmolLM2-135M, tokenizer, validation against independent references, perplexity, benchmarks
-- [~] Groundwork + Campus AI OS: neural embeddings, a local LLM, re-run benchmarks, Docker builds
-- [~] INT8/FP8 accelerator: ORFS synthesis, place and route, STA, GDSII, gate-level simulation
-- [ ] RISC-V CPU: caches, ORFS timing and area
-- [ ] Distributed training: PyTorch DDP (gloo) cross-check
-- [ ] MCP Fabric: OAuth 2.1 resource server, approvals, TLS
-- [ ] Nebula: container lifecycle via Docker with resource limits, TLS
-- [ ] EvalOps: Python workers, outbox and idempotency, LLM judge using a local model, GitHub checks against a fake API
-- [ ] UVM: SVA assertions, register model (RAL)
-- [ ] VectorDB: Docker build, fault-injection fsync test
-- [ ] CUDA kernels: tensor-core (mma) kernel verified on the emulator, compiled to SASS
-- [ ] EdgeFleet: signing-key rotation
-- [ ] InferX: run against real-model engines (after the LLM engine work)
+## PROJECTS monorepo
+- [x] Industrial Edge: INT8 TinyML (QEMU Cortex-M), PdM evaluation, drift, MQTT TLS/mTLS, Docker
+- [x] LLM inference engine: GGUF, SmolLM2-135M, validation against NumPy and llama.cpp, perplexity, benchmarks
+- [x] Groundwork + Campus AI OS: neural embeddings, local LLM, reranker, grounding enforcement, Docker images
+- [x] INT8/FP8 accelerator: ORFS flow; PE to GDS; top level synthesised, placed and gate-level simulated
+- [x] RISC-V CPU: caches, single-cycle baseline, reduced-flow timing
+- [x] Distributed training: PyTorch cross-check (DDP, ZeRO-1, resume) in CI
+- [x] MCP Fabric: OAuth 2.1 resource server, approvals, credential isolation, threat tests, TLS
+- [x] Nebula: Docker job runtime, GPU detection
+- [x] EvalOps: outbox, idempotency, Python workers, LLM judge with validation, GitHub checks
+- [x] InferX: re-benchmarked with SmolLM2 (routing gain within noise; autoscaling verified)
+- [x] UVM: SVA, RAL, native SV-UVM on Verilator 5.052
+- [x] VectorDB: WAL fault injection, Docker image in CI
+- [x] CUDA kernels: tensor-core GEMM, backward passes, sm_89
+- [x] EdgeFleet: release-key rotation
 
 ## Cross-cutting
-- [~] RESUME_EVIDENCE.md
-- [ ] SCORECARD.md (20 projects, four scores each, confidence, evidence links)
-- [ ] OWNER_ACTION_PLAN_20_PROJECTS.pdf
-- [ ] Final README/HANDOFF update, push, CI check
+- [x] RESUME_EVIDENCE.md
+- [x] SCORECARD.md (20 projects, four scores, confidence, CI runs, supported bullets)
+- [x] OWNER_ACTION_PLAN_20_PROJECTS.pdf
+- [x] Root README and HANDOFF updated
+
+## Owner-only (not doable here)
+- [B] RTX 4060 runs: CUDA kernels, Nebula, distributed training
+- [B] Cortex-M board run (Industrial Edge)
+- [B] FPGA bring-up (RISC-V) or removing the FPGA claim
+- [B] Commercial UVM simulator run
+- [B] Real GitHub App, IdP, LLM API key, deployments, betas
+- [B] Internship verification
