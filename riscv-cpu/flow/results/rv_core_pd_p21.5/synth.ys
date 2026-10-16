@@ -1,0 +1,12 @@
+read_verilog -sv /home/user/PROJECTS/riscv-cpu/rtl/rv_alu.sv /home/user/PROJECTS/riscv-cpu/rtl/rv_decode.sv /home/user/PROJECTS/riscv-cpu/rtl/rv_core.sv /home/user/PROJECTS/riscv-cpu/rtl/rv_single.sv /home/user/PROJECTS/riscv-cpu/rtl/rv_cache.sv /home/user/PROJECTS/riscv-cpu/flow/src/rv_pd.sv
+hierarchy -check -top rv_core_pd
+synth -top rv_core_pd -flatten
+dfflibmap -liberty /tmp/claude-0/-home-user/6fee72ad-dbc2-5262-982a-1a11b9d97e54/scratchpad/pdk/sky130hd_tt_nodontuse.lib
+abc -D 21500 -liberty /tmp/claude-0/-home-user/6fee72ad-dbc2-5262-982a-1a11b9d97e54/scratchpad/pdk/sky130hd_tt_nodontuse.lib
+opt_clean -purge
+hilomap -singleton -hicell sky130_fd_sc_hd__conb_1 HI -locell sky130_fd_sc_hd__conb_1 LO
+setundef -zero
+splitnets -ports
+opt_clean -purge
+tee -o /home/user/PROJECTS/riscv-cpu/flow/build/rv_core_pd_p21.5/synth_area.txt stat -liberty /tmp/claude-0/-home-user/6fee72ad-dbc2-5262-982a-1a11b9d97e54/scratchpad/pdk/sky130hd_tt_nodontuse.lib
+write_verilog -noattr -noexpr /home/user/PROJECTS/riscv-cpu/flow/build/rv_core_pd_p21.5/netlist.v

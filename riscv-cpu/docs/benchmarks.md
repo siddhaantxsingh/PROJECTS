@@ -2,7 +2,7 @@
 
 Rendered by `tools/report.py` from `results/2026-10-13/`. Reproduce with `make fetch bench synth report`.
 
-All numbers are **simulated cycles** of the RTL in Verilator (cycle-accurate for this design: single-cycle combinational memories, so there are no cache or memory-latency effects). Every run below had lockstep checking against the reference ISS enabled and passed. Compiler: riscv64-unknown-elf-gcc 13.2.0, `-march=rv32im_zicsr_zifencei -mabi=ilp32 -O2`.
+All numbers are **simulated cycles** of the RTL in Verilator (idealised configuration: single-cycle combinational memories, so there are no cache or memory-latency effects; the cached configuration is in caches_results.md). Every run below had lockstep checking against the reference ISS enabled and passed. Compiler: riscv64-unknown-elf-gcc 13.2.0, `-march=rv32im_zicsr_zifencei -mabi=ilp32 -O2`.
 
 ## CoreMark
 
@@ -49,5 +49,10 @@ Mispredict rate counts all control transfers (branches, JAL, JALR) resolved in E
 | MULT18X18D | 4 |
 | CCU2C | 465 |
 
-TRELLIS_DPR16X4 are 16×4 LUT RAMs (register file, BTB tags/targets); MULT18X18D are DSP blocks for the 33×33 multiplier. No timing numbers: no place-and-route or static timing tool was available, so Fmax is unknown. The single-cycle 33×33 multiplier and the combinational memory reads are the likely critical paths.
+TRELLIS_DPR16X4 are 16×4 LUT RAMs (register file, BTB tags/targets); MULT18X18D are DSP blocks for the 33×33 multiplier. These ECP5 counts are from 2026-10-13, before the memory ready ports were added.
+
+## Caches, single-cycle baseline, timing
+
+* Cache configurations × memory latency (CPI, CoreMark/MHz, hit rates) and cache bug injection: [caches_results.md](caches_results.md).
+* sky130hd timing/area/power after placement, CTS and global routing (reduced flow, no detailed routing), and the IPC × Fmax comparison with the single-cycle baseline: [timing.md](timing.md).
 

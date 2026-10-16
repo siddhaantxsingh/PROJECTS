@@ -1,0 +1,10 @@
+ 06:31:51 up 12 min,  0 user,  load average: 6.81, 7.15, 4.22
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3512938 instret=3153833 CPI=1.114 branches=653035 mispredicts=76786 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=3155749 instret=3153834 CPI=1.001 branches=653034 mispredicts=0 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=4045872 instret=3153834 CPI=1.283 branches=653034 mispredicts=76785 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=4697097 instret=3153834 CPI=1.489 branches=653034 mispredicts=76785 irqs=0
+Archive ar -rcs Vrv_top__ALL.a Vrv_top__ALL.o
+PASS build/bench/elf/coremark.elf: exit=0 cycles=10451424 instret=3153814 CPI=3.314 branches=653023 mispredicts=76784 irqs=0
+PASS build/bench/elf/coremark.elf: exit=0 cycles=18853976 instret=3153814 CPI=5.978 branches=653023 mispredicts=76784 irqs=0
+recheck rc=0
+ 06:32:20 up 13 min,  0 user,  load average: 5.86, 6.90, 4.23

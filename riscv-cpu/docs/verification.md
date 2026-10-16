@@ -68,6 +68,25 @@ Over 8 seeds, each run takes about 12,000 interrupts, and every one is checked i
 
 CoreMark and the riscv-tests benchmarks are self-checking. They run with lockstep on, both with and without the predictor, and also on the 4-entry-BTB build.
 
+## 7. Cached configurations, single-cycle baseline, bug injection
+
+* `make test-cache-all` runs, on three cache configurations and three
+  memory latencies, all in lockstep:
+  * riscv-tests;
+  * 400 random programs;
+  * the directed cache test `tests/cache_test.S`;
+  * the interrupt test.
+* `make test-smc` pins down self-modifying-code behaviour without FENCE.I.
+* `tools/spike-compare.py` matched Spike on all 400 random programs on two
+  cache configurations.
+* `make test-single` runs the same suites on the single-cycle baseline. It
+  also matched Spike 400/400.
+* `tools/mutate-cache.py` injected 9 cache bugs; all 9 were caught.
+
+Details are in [caches.md](caches.md) and
+[caches_results.md](caches_results.md). Logs are in
+`docs/evidence/2026-10-15/`.
+
 ## Static checks
 
 `make lint` runs `verilator --lint-only -Wall`, which is clean. `make synth` runs Yosys and must parse and map the design.
@@ -76,4 +95,4 @@ CoreMark and the riscv-tests benchmarks are self-checking. They run with lockste
 
 - No formal verification: no SymbiYosys/riscv-formal flow was available offline.
 - No coverage measurement (functional or code).
-- No gate-level simulation.
+- No gate-level simulation (the sky130hd netlists from docs/timing.md were not simulated).

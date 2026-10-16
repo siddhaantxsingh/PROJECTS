@@ -1,0 +1,4 @@
+ 06:34:58 up 15 min,  0 user,  load average: 2.54, 4.89, 3.87
+{"top": "rv_top_pd", "clock_ns": 20.0, "setup_wns_ns": -1.179698150335082, "hold_wns_ns": 0.46408167511342874, "setup_tns_ns": -3.7610857715034385, "fmax_mhz": null, "synth_cells": 52250, "synth_cell_area_um2": 508802.9824, "flops": 11143, "design_area_um2": 590906.0, "utilization": 47.0, "power_total_w": 0.0614, "timing_met": false, "fmax_est_mhz": 47.2}
+{"top": "rv_top_pd", "clock_ns": 23.0, "setup_wns_ns": 1.3905197387112243, "hold_wns_ns": 0.46408167511342874, "setup_tns_ns": 0.0, "fmax_mhz": 43.5, "synth_cells": 52250, "synth_cell_area_um2": 508802.9824, "flops": 11143, "design_area_um2": 590858.0, "utilization": 47.0, "power_total_w": 0.0534, "timing_met": true, "fmax_est_mhz": 46.3}
+ 06:40:00 up 20 min,  0 user,  load average: 1.06, 2.66, 3.21

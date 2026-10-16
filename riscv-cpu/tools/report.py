@@ -87,8 +87,12 @@ if os.path.exists(f"{R}/synth_ecp5.txt"):
         if k in cells:
             w(f"| {k} | {int(cells[k]):,} |")
     w("\nTRELLIS_DPR16X4 are 16×4 LUT RAMs (register file, BTB tags/targets); MULT18X18D are DSP blocks for "
-      "the 33×33 multiplier. No timing numbers: no place-and-route or static timing tool was available, so "
-      "Fmax is unknown. The single-cycle 33×33 multiplier and the combinational memory reads are the likely "
-      "critical paths.\n")
+      "the 33×33 multiplier. These ECP5 counts are from 2026-10-13, before the "
+      "memory ready ports were added.\n")
+    w("## Caches, single-cycle baseline, timing\n")
+    w("* Cache configurations × memory latency (CPI, CoreMark/MHz, hit rates) and cache bug injection: "
+      "[caches_results.md](caches_results.md).")
+    w("* sky130hd timing/area/power after placement, CTS and global routing (reduced flow, no detailed "
+      "routing), and the IPC × Fmax comparison with the single-cycle baseline: [timing.md](timing.md).\n")
 open("docs/benchmarks.md", "w").write("\n".join(L) + "\n")
 print(f"wrote docs/benchmarks.md and {R}/")
