@@ -26,7 +26,30 @@ Do these in order. The first five give the most evidence for the least time.
 
 # 2. Project-to-owner-step matrix
 
-<<MATRIX>>
+| # | Project | Owner-only steps | Where |
+|---|---|---|---|
+| 1 | RaftKV | Merge the branch; publish the LSM C API then run `make test-lsm`; release with a patched Go; optional multi-machine benchmark | 14.1; repo `raft-kv/docs/OWNER_ACTIONS.md` |
+| 2 | LSM Engine | Merge (the on-disk format changed, so migrate any old data); update the Go bindings; real power-loss test on hardware; idle-machine benchmark | 14.1; repo `docs/OWNER_ACTIONS.md` |
+| 3 | TANDEM | Build and run the Docker/Compose stack; deploy with TLS and real secrets; re-measure latency on an idle machine; remove the OT claim from the resume | 11, 14.2; repo `docs/OWNER_ACTIONS.md` |
+| 4 | EMBER | Merge; longer fuzzing runs; idle-machine benchmark | 14.1; repo `docs/OWNER_ACTIONS.md` |
+| 5 | VerifyCloud | Staging with Compose; GitHub App; LLM API key; SMTP; gVisor on worker VMs; choose a maintained S3/MinIO; RTL-engineer beta | 6.2, 6.3, 10, 11 |
+| 6 | Vector DB | Idle-machine benchmark; optional real dataset (SIFT1M) | 4; `vectordb/docs/` |
+| 7 | LLM inference engine | No GPU step; optional CPU reproduction | 5.4 |
+| 8 | CUDA kernels | **RTX 4060 run** (moves GPU timing from BLOCKED to measured) | 3, 5.1 |
+| 9 | Distributed training | RTX 4060 NCCL check; optional multi-GPU rental | 5.3, 5.6, 12 |
+| 10 | Groundwork | Full-corpus neural benchmark; larger LLM; choose a licence | 5.5 |
+| 11 | RISC-V CPU | FPGA bring-up (or remove the FPGA claim); full ORFS place and route (~15 GB free disk); official CoreMark | 8; `riscv-cpu/docs/OWNER_ACTIONS.md` |
+| 12 | UVM SoC verification | Commercial simulator run (Xcelium, Questa, VCS or EDA Playground) | 7 |
+| 13 | INT8/FP8 accelerator | Top-level place and route locally; multi-corner timing; shuttle requirements | `int8-fp8-accelerator/docs/OWNER_ACTIONS.md` |
+| 14 | Campus AI OS | Deployment; student beta with consent; licence | 10, 11 |
+| 15 | MCP Fabric | Real IdP (Keycloak or Auth0); real TLS certificate; clean benchmark | 6.1; `mcp-fabric/docs/OWNER_ACTIONS.md` |
+| 16 | Industrial Edge | **Real Cortex-M board** latency; real vibration data | 9 |
+| 17 | InferX | GPU replicas once the engine has a GPU path | 5.4 |
+| 18 | Nebula GPU cloud | **RTX 4060 container GPU job**; multi-node | 5.2, 5.6 |
+| 19 | EvalOps | GitHub App for check runs; validate a larger judge model | 6.3; `evalops/docs/OWNER_ACTIONS.md` |
+| 20 | EdgeFleet | Real devices (e.g. Raspberry Pi or a Cortex-M board with a bootloader) for the OTA trial | 9; `edgefleet/docs/` |
+
+Internship and resume steps (13, 14) apply to all projects.
 
 # 3. Laptop setup: RTX 4060 + WSL2 + CUDA + Docker
 
@@ -134,7 +157,107 @@ nvidia-smi dmon -s pucm -d 1 -o T -f gpu_dmon_$(date +%H%M%S).log
 4. Only after that, update the project's benchmark table, and link the raw log from each number.
 5. Commit with a message like "evidence: RTX 4060 run of gpu_bench (3 runs)". **Never** edit numbers by hand, round them up, or drop a slow run.
 
-<<PROJECT_GPU>>
+# 5. GPU and laptop runs, project by project
+
+Do these after section 3, one at a time. Every script below exists in the repository and was written by the audit. **None of them has ever run on a GPU**, because the build machine had no GPU. Treat their first run as the real test. If a step fails, save the output anyway: a recorded failure is evidence, and it tells the next session what to fix.
+
+## 5.1 CUDA kernels (RTX 4060, sm_89): about 30 minutes
+
+```
+# WSL
+cd ~/src/PROJECTS/cuda-kernels
+sudo apt-get install -y build-essential g++-13 clang-18 python3-pip
+tools/owner_rtx4060.sh
+```
+
+- **What it does:**
+  - records the GPU, driver and clocks;
+  - runs the 150 emulator checks;
+  - builds `bench/gpu_bench.cu` for sm_89 (with `nvcc` if installed, otherwise clang 18 and the PyPI toolkit, as in CI);
+  - runs the benchmark 3 times while `nvidia-smi dmon` records.
+- **Success:**
+  - `make_test.log` ends with `150 checks, 0 failures`;
+  - each `runN.txt` ends with `0 correctness check failures`;
+  - the `mma.m16n8k16 fragment layout (probe)` line says PASS. That proves the emulator's tensor-core model matches real hardware.
+- **Save:** commit `cuda-kernels/results/gpu/<date>-rtx4060/`. Then change the GPU-timing rows in `docs/requirements.md` from BLOCKED to measured, quoting the median of the 3 runs plus the clocks and power from `dmon.txt`.
+- **If blocked:**
+  - **Build error:** install the CUDA toolkit (3.4), so the script uses `nvcc -arch=sm_89`.
+  - **A `check` FAIL:** do not publish any GFLOP/s numbers. Keep the folder and open an issue with it.
+
+## 5.2 Nebula GPU cloud: a real GPU job in a container, about 30 minutes
+
+```
+# WSL (Docker Desktop with GPU support from 3.5)
+docker run --rm --gpus all ubuntu:24.04 nvidia-smi        # must print the RTX 4060
+cd ~/src/PROJECTS/nebula-gpu-cloud
+cargo build --release
+scripts/owner_gpu_check.sh
+```
+
+- **Success:**
+  - the node registers with `"model":"NVIDIA GeForce RTX 4060"`, plus its memory and UUID;
+  - a job runs in a container and prints `GPU 0: NVIDIA GeForce RTX 4060`, with `CUDA_VISIBLE_DEVICES=0`;
+  - the script ends with `PASS: real GPU job ran in a container`.
+- **Save:**
+  - commit `docs/evidence/owner-gpu-<date>/`;
+  - copy the real `nvidia-smi` line into the `ONE_4060` fixture in `src/gpu.rs`, then run `cargo test --release gpu::`.
+- **If blocked:**
+  - a permissions error inside the container: retry with `--container-user` set to a uid in the `video` group, and note it in the evidence;
+  - if Docker cannot see the GPU, go back to 3.5.
+
+## 5.3 Distributed training: single-GPU NCCL check, about 20 minutes
+
+```
+cd ~/src/PROJECTS/distributed-training
+bash owner/rtx4060_single_gpu.sh
+```
+
+- **What it does:**
+  - installs CUDA PyTorch (cu126);
+  - runs a one-rank NCCL sanity check;
+  - runs a one-rank CUDA DDP training run in float64, compared with dtrain's CPU result.
+- **Success:**
+  - `"nccl_sanity_ok": true`;
+  - parameter differences per step of about 1e-15 to 1e-12. This is not exactly 0, because GPU kernels add numbers in a different order.
+  - `8 passed` from pytest.
+- **Save:** the files the script names, in `benchmarks/results/<date>/gpu/`.
+- **Know the limit:** **one GPU cannot show multi-GPU scaling**, which needs 5.6. dtrain itself is NumPy/CPU; this checks PyTorch on CUDA against it.
+
+## 5.4 LLM inference engine and InferX: no GPU step
+
+- The engine has **no GPU code path**, so there is nothing to run on the RTX 4060. Do not describe it as a GPU engine.
+- Optional: reproduce the CPU results on the laptop with the commands in `llm-inference-engine/docs/OWNER_ACTIONS.md`. The expected chat answer is "The capital of France is Paris."
+- **InferX:** its GPU replicas stay BLOCKED until the engine gains a GPU path. The CPU benchmarks are in `inferx/docs/`.
+
+## 5.5 Groundwork and Campus AI OS with the local models (optional), about 1 hour
+
+The local GGUF models run on CPU. On the laptop they will be faster than on the build machine.
+
+1. `python3 groundwork/scripts/fetch_models.py` downloads the four Apache-2.0 models from Docker Hub (about 2.7 GB).
+2. Run the full-corpus neural benchmark and the reranker-quality run, using `groundwork/docs/OWNER_ACTIONS.md`.
+
+- **Success:** NDCG@10 and recall numbers for the **full** corpus. The audit ran only a 31-document sub-corpus.
+- **Save:** the new results folder.
+
+## 5.6 Multi-GPU scaling on a rented machine (optional)
+
+Follow section 12 for cost controls first. On a 2× or 4× GPU instance:
+
+```
+sudo shutdown -h +120          # hard stop after 2 hours, set FIRST
+git clone https://github.com/siddhaantxsingh/PROJECTS.git && cd PROJECTS
+git checkout ccr-a6e6c567-y4w7k8
+nvidia-smi topo -m > topo.txt
+bash distributed-training/owner/multi_gpu_nccl.sh
+```
+
+- **Success:**
+  - NCCL all-reduce bandwidth for 1/2/4 GPUs;
+  - DDP throughput scaling;
+  - the parameter cross-check still within about 1e-12.
+- **Save:** all output files and `topo.txt`.
+- **Nebula multi-node:** run two agents on two GPU machines, using the same steps as 5.2.
+
 
 # 6. Docker, MinIO, GitHub App staging and secrets safety
 
@@ -292,8 +415,27 @@ Full analysis: `master/RESUME_EVIDENCE.md`. Steps:
 
 Tick each box only after you have done the check yourself. Sign and date the bottom of the page and keep it with your records.
 
-<<SIGNOFF>>
+| ☐ | Project | I ran or reviewed | Evidence file I checked | Initials / date |
+|---|---|---|---|---|
+| ☐ | RaftKV | | | |
+| ☐ | LSM Engine | | | |
+| ☐ | TANDEM | | | |
+| ☐ | EMBER | | | |
+| ☐ | VerifyCloud | | | |
+| ☐ | Vector DB | | | |
+| ☐ | LLM inference engine | | | |
+| ☐ | CUDA kernels | | | |
+| ☐ | Distributed training | | | |
+| ☐ | Groundwork | | | |
+| ☐ | RISC-V CPU | | | |
+| ☐ | UVM SoC verification | | | |
+| ☐ | INT8/FP8 accelerator | | | |
+| ☐ | Campus AI OS | | | |
+| ☐ | MCP Fabric | | | |
+| ☐ | Industrial Edge | | | |
+| ☐ | InferX | | | |
+| ☐ | Nebula GPU cloud | | | |
+| ☐ | EvalOps | | | |
+| ☐ | EdgeFleet | | | |
 
-> **Signature:** ______________________   **Date:** ____________
->
-> I have reviewed the evidence for each ticked project, and I can explain every claim I will make about it.
+> **Signature:** ______________________   **Date:** ____________ — I have reviewed the evidence for each ticked project, and I can explain every claim I will make about it.
