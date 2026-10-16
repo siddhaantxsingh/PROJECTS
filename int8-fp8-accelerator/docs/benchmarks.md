@@ -40,7 +40,7 @@ FP8 quantisation itself costs 3.6 % (E4M3) and 7.6 % (E5M2) mean error relative 
 | PE, INT8 + FP8 (80-bit exact accumulator) | 2,358 | 1,031 | 100 | 90 | 1 |
 | post unit (FP32 rounding + INT32 requantisation), per column | 12,478 | — | — | — | — |
 
-Exact FP8 accumulation makes each PE about 21× larger in LUTs than an INT8-only PE. The 80-bit barrel shifter and adder dominate. The full `npu_top` was not synthesised: its 48 KiB of scratchpad are behavioural arrays and would need BRAM macros.
+Exact FP8 accumulation makes each PE about 21× larger in LUTs than an INT8-only PE. The 80-bit barrel shifter and adder dominate. The default `npu_top` (8×8, 48 KiB of scratchpad) was not synthesised: its scratchpads are behavioural arrays and would need BRAM macros. The reduced 4×4 configuration with 8×8×16 scratchpads was (`make synth-top`: 122,840 generic cells, `synth/results/top_n4_generic.txt`).
 
 
 ## ASIC (sky130hd typical, OpenROAD-flow-scripts; academic PDK, no sign-off)
