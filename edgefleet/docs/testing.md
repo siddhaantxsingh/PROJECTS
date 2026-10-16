@@ -1,6 +1,6 @@
 # Testing
 
-`go test ./...`, about 25 s. `go test -race ./internal/...` is clean.
+`go test ./...`: packages run in parallel, and the slowest, `internal/server`, took 32.6 s in the 2026-10-15 run ([go_test_all.log](evidence/2026-10-15/go_test_all.log)). `go test -race ./internal/...` is clean.
 
 | Area | Tests |
 |---|---|
