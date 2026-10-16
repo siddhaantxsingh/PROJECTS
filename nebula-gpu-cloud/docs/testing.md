@@ -1,6 +1,6 @@
 # Testing
 
-`cargo test --release` runs everything (about 30 s).
+`cargo test --release` runs everything: 38 tests. The 2026-10-15 run on a heavily loaded shared machine spent about 4.6 minutes in tests, 249 s of it in `tests/sim.rs` ([ci_local.log](evidence/2026-10-15/ci_local.log)).
 
 | Suite | What it checks |
 |---|---|
