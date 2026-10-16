@@ -16,7 +16,7 @@ RV32I + M + Zicsr + Zifencei + Zicntr, machine mode only.
 | Interrupts | machine software, timer and external, taken precisely at EX; priority MEI > MSI > MTI |
 | Misaligned data | trap (no hardware support) |
 | WFI | executes as a NOP |
-| FENCE | NOP (single in-order hart, no caches); FENCE.I flushes the pipeline |
+| FENCE | NOP (single in-order hart; with the caches, loads that miss or are uncached already wait for all older buffered stores) ; FENCE.I flushes the pipeline and pulses `fencei`, which invalidates the I-cache and makes refills wait for the write buffer |
 
 ## Pipeline
 
@@ -39,7 +39,25 @@ RV32I + M + Zicsr + Zifencei + Zicntr, machine mode only.
 
 ## Memory interface
 
-One combinational instruction read port and one combinational-read / synchronous-write data port onto the same address space. Stores are therefore visible to later fetches, after FENCE.I flushes anything fetched early. This models single-cycle on-chip SRAM. A real SRAM with registered reads would need an extra fetch stage, or a stall on every load. See [limitations.md](limitations.md).
+One combinational instruction read port and one combinational-read / synchronous-write data port onto the same address space. Each port has a ready input:
+
+* `imem_ready = 0` makes IF insert a bubble and retry.
+* `dmem_ready = 0` holds every stage up to MEM and sends a bubble to WB.
+
+  A divide result that finishes during such a stall is kept in a register, and the EX operands keep tracking the forwarding network.
+
+The core also outputs `fencei`, a pulse when FENCE.I commits.
+
+Two memory configurations exist:
+
+* **Idealised** (`rv_core` alone, both ready inputs at 1): models single-cycle on-chip SRAM. Stores are visible to later fetches after FENCE.I flushes anything fetched early.
+* **Cached** (`rv_top`): an I-cache, a write-through D-cache with a write buffer, and one memory bus with configurable latency. See [caches.md](caches.md).
+
+A real SRAM with registered reads would need an extra fetch stage, or a stall on every load. See [limitations.md](limitations.md).
+
+## Single-cycle baseline
+
+`rtl/rv_single.sv` executes every instruction in one cycle, except DIV/REM, which take 33. It reuses the decoder, ALU, multiplier, divider, CSR set and trap logic, and has the same ports as `rv_core`. The same harness, ISS lockstep and Spike comparison therefore run on it unchanged (`make test-single`). It exists only as a comparison point for IPC × Fmax; see [timing.md](timing.md).
 
 ## Trace port
 

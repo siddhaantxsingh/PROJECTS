@@ -53,7 +53,7 @@ module rv_icache #(
     localparam int TAG_BITS = 32 - OFF_BITS - IDX_BITS;
     localparam int WB = $clog2(LINE_WORDS) > 0 ? $clog2(LINE_WORDS) : 1;
 
-    logic [WAYS-1:0][SETS-1:0] valid;   // packed, so reset/flush clear it in one assignment
+    logic [WAYS*SETS-1:0] valid;        // bit w*SETS+set; one vector so reset/flush clear it at once
     logic [TAG_BITS-1:0] tags  [WAYS][SETS];
     logic [31:0]         data  [WAYS][SETS*LINE_WORDS];
     logic [SETS-1:0]     lru;            // way to replace next (2-way only)
@@ -66,7 +66,7 @@ module rv_icache #(
     always_comb begin
         hit = 1'b0; hit_way = 1'b0; rdata = data[0][widx];
         for (int w = 0; w < WAYS; w++)
-            if (valid[w][idx] && tags[w][idx] == tag) begin
+            if (valid[w*SETS + 32'(idx)] && tags[w][idx] == tag) begin
                 hit = 1'b1; hit_way = w[0]; rdata = data[w][widx];
             end
     end
@@ -83,7 +83,7 @@ module rv_icache #(
     assign req_valid = state == REQ;
     assign req_addr  = fill_addr;
 
-    wire victim = (WAYS == 1) ? 1'b0 : (!valid[0][idx] ? 1'b0 : !valid[WAYS-1][idx] ? 1'b1 : lru[idx]);
+    wire victim = (WAYS == 1) ? 1'b0 : (!valid[32'(idx)] ? 1'b0 : !valid[(WAYS-1)*SETS + 32'(idx)] ? 1'b1 : lru[idx]);
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -98,7 +98,7 @@ module rv_icache #(
                     state <= REQ;
                     fill_addr <= {addr[31:OFF_BITS], {OFF_BITS{1'b0}}};
                     fill_idx <= idx; fill_way <= victim;
-                    valid[victim][idx] <= 1'b0;  // its data is overwritten beat by beat
+                    valid[victim*SETS + 32'(idx)] <= 1'b0;  // its data is overwritten beat by beat
                     cancel <= 1'b0;
                     perf_refills <= perf_refills + 32'd1;
                 end
@@ -108,7 +108,7 @@ module rv_icache #(
                     if (beat == WB'(LINE_WORDS - 1)) begin
                         state <= IDLE;
                         if (!cancel && !flush) begin
-                            valid[fill_way][fill_idx] <= 1'b1;
+                            valid[fill_way*SETS + 32'(fill_idx)] <= 1'b1;
                             if (WAYS > 1) lru[fill_idx] <= !fill_way;
                         end
                     end
@@ -174,7 +174,7 @@ module rv_dcache #(
     localparam int WB = $clog2(LINE_WORDS) > 0 ? $clog2(LINE_WORDS) : 1;
     localparam int QB = $clog2(WB_DEPTH);
 
-    logic [WAYS-1:0][SETS-1:0] valid;   // packed, so reset/flush clear it in one assignment
+    logic [WAYS*SETS-1:0] valid;        // bit w*SETS+set; one vector so reset/flush clear it at once
     logic [TAG_BITS-1:0] tags  [WAYS][SETS];
     logic [31:0]         data  [WAYS][SETS*LINE_WORDS];
     logic [SETS-1:0]     lru;
@@ -189,7 +189,7 @@ module rv_dcache #(
     always_comb begin
         hit = 1'b0; hit_way = 1'b0; hit_data = data[0][widx];
         for (int w = 0; w < WAYS; w++)
-            if (valid[w][idx] && tags[w][idx] == tag) begin
+            if (valid[w*SETS + 32'(idx)] && tags[w][idx] == tag) begin
                 hit = 1'b1; hit_way = w[0]; hit_data = data[w][widx];
             end
     end
@@ -215,7 +215,7 @@ module rv_dcache #(
     logic fill_way, fill_line, cancel;
     logic [WB-1:0] beat;
 
-    wire victim = (WAYS == 1) ? 1'b0 : (!valid[0][idx] ? 1'b0 : !valid[WAYS-1][idx] ? 1'b1 : lru[idx]);
+    wire victim = (WAYS == 1) ? 1'b0 : (!valid[32'(idx)] ? 1'b0 : !valid[(WAYS-1)*SETS + 32'(idx)] ? 1'b1 : lru[idx]);
     wire load_hit  = re && cacheable && hit;
     wire load_miss = re && !(cacheable && hit) && state == IDLE;  // needs a bus read
     wire store_ok  = we && !wb_full;
@@ -256,7 +256,7 @@ module rv_dcache #(
                     fill_addr <= cacheable ? {addr[31:OFF_BITS], {OFF_BITS{1'b0}}} : {addr[31:2], 2'b00};
                     fill_idx <= idx; fill_way <= victim; cancel <= 1'b0;
                     if (cacheable) begin
-                        valid[victim][idx] <= 1'b0;
+                        valid[victim*SETS + 32'(idx)] <= 1'b0;
                         perf_refills <= perf_refills + 32'd1;
                     end else perf_uncached <= perf_uncached + 32'd1;
                 end
@@ -270,7 +270,7 @@ module rv_dcache #(
                         if (beat == WB'(LINE_WORDS - 1)) begin
                             state <= IDLE;
                             if (!cancel && !(snoop_inv && snoop_addr[31:OFF_BITS] == fill_addr[31:OFF_BITS])) begin
-                                valid[fill_way][fill_idx] <= 1'b1;
+                                valid[fill_way*SETS + 32'(fill_idx)] <= 1'b1;
                                 if (WAYS > 1) lru[fill_idx] <= !fill_way;
                             end
                         end
@@ -283,7 +283,7 @@ module rv_dcache #(
             if (snoop_inv) begin
                 for (int w = 0; w < WAYS; w++)
                     if (tags[w][snoop_addr[OFF_BITS +: IDX_BITS]] == snoop_addr[31 -: TAG_BITS])
-                        valid[w][snoop_addr[OFF_BITS +: IDX_BITS]] <= 1'b0;
+                        valid[w*SETS + 32'(snoop_addr[OFF_BITS +: IDX_BITS])] <= 1'b0;
                 if (state != IDLE && fill_line && snoop_addr[31:OFF_BITS] == fill_addr[31:OFF_BITS]) cancel <= 1'b1;
             end
         end

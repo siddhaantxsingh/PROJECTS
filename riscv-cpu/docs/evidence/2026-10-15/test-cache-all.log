@@ -1,4 +1,8 @@
- 23:04:01 up 12 min,  0 user,  load average: 144.93, 73.45, 29.85
+ 06:23:13 up 4 min,  0 user,  load average: 7.47, 2.37, 0.85
+verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --top-module rv_core rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv
+verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --top-module rv_top rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv rtl/rv_cache.sv
+verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM --top-module rv_single rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_single.sv
+verilator --lint-only -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --top-module rv_top -GI_WAYS=2 -GD_WAYS=2 -GLINE_WORDS=8 rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv rtl/rv_cache.sv
 make --no-print-directory test-cache CACHE=64:1:64:1:4:4 MEMLAT=20
 verilator --cc --exe --build -j 4 -O3 --x-assign fast --x-initial fast --Mdir obj_dir_c64_1_64_1_4_4 -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL --assert -GI_SETS=64 -GI_WAYS=1 -GD_SETS=64 -GD_WAYS=1 -GLINE_WORDS=4 -GWB_DEPTH=4 -CFLAGS "-O2 -std=c++17 -DCACHED -DI_SETS_SIM=64 -DI_WAYS_SIM=1 -DD_SETS_SIM=64 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=4" --top-module rv_top rtl/rv_alu.sv rtl/rv_decode.sv rtl/rv_core.sv rtl/rv_cache.sv tb/sim_main.cpp tb/iss.cpp
 g++  -I.  -MMD -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -faligned-new -fcf-protection=none -Wno-bool-operation -Wno-overloaded-virtual -Wno-shadow -Wno-sign-compare -Wno-uninitialized -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-variable     -O2 -std=c++17 -DCACHED -DI_SETS_SIM=64 -DI_WAYS_SIM=1 -DD_SETS_SIM=64 -DD_WAYS_SIM=1 -DLINE_WORDS_SIM=4 -DWB_DEPTH_SIM=4   -Os -c -o sim_main.o ../tb/sim_main.cpp
@@ -1284,4 +1288,4 @@ PASS build/irq/irq_test.elf: exit=0 cycles=1706096 instret=79108 CPI=21.567 bran
 PASS build/irq/irq_test.elf: exit=0 cycles=1750106 instret=80442 CPI=21.756 branches=10302 mispredicts=9 irqs=848
 PASS build/irq/irq_test.elf: exit=0 cycles=1701828 instret=79025 CPI=21.535 branches=10196 mispredicts=9 irqs=779
 test-cache-all rc=0
- 23:10:01 up 18 min,  0 user,  load average: 20.03, 35.88, 26.60
+ 06:27:43 up 8 min,  0 user,  load average: 7.83, 6.58, 3.12

@@ -1,14 +1,2 @@
- 23:10:45 up 19 min,  0 user,  load average: 20.51, 33.78, 26.33
+ 06:27:43 up 8 min,  0 user,  load average: 7.83, 6.58, 3.12
 unmutated: PASS
-{"mutant": "store hit does not update the D-cache line", "killed": true, "first_failing": "cache_test.elf", "message": "MISMATCH build/cache/cache_test.elf: exit=0 cycles=2004 instret=784 CPI=2.556 branches=256 mispredicts=6 irqs=0"}
-{"mutant": "D-cache refill does not wait for the write buffer", "killed": true, "first_failing": "cache_test.elf", "message": "MISMATCH build/cache/cache_test.elf: exit=0 cycles=2170 instret=815 CPI=2.663 branches=262 mispredicts=6 irqs=0"}
-{"mutant": "FENCE.I does not invalidate the I-cache", "killed": true, "first_failing": "cache_test.elf", "message": "MISMATCH build/cache/cache_test.elf: exit=0 cycles=2827 instret=1193 CPI=2.370 branches=365 mispredicts=14 irqs=0"}
-{"mutant": "D-cache tag compare uses only 4 tag bits", "killed": true, "first_failing": "dhrystone.elf", "message": "MISMATCH build/bench/elf/dhrystone.elf: exit=0 cycles=3921 instret=789 CPI=4.970 branches=148 mispredicts=78 irqs=0"}
-{"mutant": "write buffer head never advances (pops lost)", "killed": true, "first_failing": "cache_test.elf", "message": "MISMATCH build/cache/cache_test.elf: exit=0 cycles=220 instret=122 CPI=1.803 branches=16 mispredicts=2 irqs=0"}
-{"mutant": "HTIF window cached (only addr[31] decides)", "killed": true, "first_failing": "dhrystone.elf", "message": "MISMATCH build/bench/elf/dhrystone.elf: exit=0 cycles=770204 instret=193154 CPI=3.988 branches=43648 mispredicts=11157 irqs=0"}
-{"mutant": "I-cache victim stays valid while it is refilled", "killed": true, "first_failing": "cache_test.elf", "message": "MISMATCH build/cache/cache_test.elf: exit=0 cycles=2766 instret=1182 CPI=2.340 branches=361 mispredicts=11 irqs=0"}
-{"mutant": "D-cache refill installs the line one beat early", "killed": true, "first_failing": "cache_test.elf", "message": "MISMATCH build/cache/cache_test.elf: exit=0 cycles=219 instret=122 CPI=1.795 branches=16 mispredicts=2 irqs=0"}
-{"mutant": "snoop invalidation ignored", "killed": true, "first_failing": "dhrystone.elf", "message": "MISMATCH build/bench/elf/dhrystone.elf: exit=0 cycles=770251 instret=193164 CPI=3.988 branches=43649 mispredicts=11157 irqs=0"}
-killed 9/9 mutants
-rc=0
- 23:15:46 up 24 min,  0 user,  load average: 21.19, 25.30, 24.66

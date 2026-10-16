@@ -26,7 +26,7 @@ MUTANTS = [
     ("HTIF window cached (only addr[31] decides)",
      "wire cacheable = addr[31] && addr[31:6] != io_base && addr[31:6] != io_base + 26'd1;", "wire cacheable = addr[31];"),
     ("I-cache victim stays valid while it is refilled",
-     "                    valid[victim][idx] <= 1'b0;  // its data is overwritten beat by beat\n", "\n"),
+     "                    valid[victim*SETS + 32'(idx)] <= 1'b0;  // its data is overwritten beat by beat\n", "\n"),
     ("D-cache refill installs the line one beat early",
      "                        if (beat == WB'(LINE_WORDS - 1)) begin\n                            state <= IDLE;\n                            if (!cancel && !(snoop_inv",
      "                        if (beat == WB'(LINE_WORDS - 2)) begin\n                            state <= IDLE;\n                            if (!cancel && !(snoop_inv"),
