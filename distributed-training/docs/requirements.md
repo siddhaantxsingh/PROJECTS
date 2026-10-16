@@ -20,4 +20,4 @@
 | PyTorch available locally | VERIFIED | PyPI wheel is CUDA-only (import fails without ~3 GB CUDA libs); used conda-forge `pytorch 2.14.1 cpu_generic` via micromamba; see `pypi_wheel_probe.txt` |
 | Multi-host | IMPLEMENTED BUT UNVERIFIED | plain TCP; only loopback tested |
 | Tensor / pipeline parallelism, ZeRO-2/3, mixed precision | NOT IMPLEMENTED | — |
-| CI | see README | `.github/workflows/distributed-training.yml`: `test` job (no torch; torch tests skip) and `torch-crosscheck` job (CPU torch from the PyTorch index) |
+| CI | VERIFIED | `.github/workflows/distributed-training.yml`: `test` job (36 passed, torch tests skip) and `torch-crosscheck` job (torch 2.14.1+cpu, 8 passed); both green in run 38861771722 |
