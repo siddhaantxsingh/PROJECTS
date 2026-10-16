@@ -10,13 +10,14 @@ A persistent approximate-nearest-neighbour search engine, written from scratch i
 - REST (axum) and gRPC (tonic) front-ends with Prometheus metrics.
 
 **Status.**
-- **Done:** the engine, the server, the benchmarks and the audit are complete and verified locally. `cargo test` runs 36 tests and all pass, including:
+- **Done:** the engine, the server, the benchmarks and the audit are complete and verified locally. `cargo test` runs 41 tests and all pass, including:
   - a crash test that truncates the WAL at every byte;
   - a property test of filtered search;
-  - end-to-end tests against a real server, including a restart.
+  - end-to-end tests against a real server, including a restart;
+  - WAL I/O fault injection (failed write, fsync and rollback, and a real EFBIG from the kernel): no acknowledged write is lost.
+- **Docker:** the image builds (156 MB) and passes a smoke test, including a restart on the same volume (`scripts/docker_build.sh`, `scripts/docker_smoke.sh`).
 - **Not done:**
   - not deployed;
-  - the Dockerfile has not been built (Docker Hub was not reachable from the build environment);
   - there is no authentication. It must run behind a trusted proxy; see [docs/security.md](docs/security.md).
 
 ## Results (100k × 128, single machine, 4 vCPU — [docs/benchmarks.md](docs/benchmarks.md))
@@ -95,3 +96,13 @@ cargo run --release --bin vdb-bench -- --out /tmp/b --n 5000 --dim 32 --queries 
 ```
 
 Minimum supported Rust version: 1.89. The `.proto` file is compiled with `protox`, so no `protoc` binary is needed.
+
+## Scorecard (2026-10-16, self-assessed)
+
+| Score | /10 | Why not higher |
+|---|---|---|
+| Fresher-portfolio strength | 8 | HNSW, PQ, SIMD and WAL from scratch with a FAISS comparison, but only synthetic datasets. |
+| Engineering maturity | 8 | Crash-at-every-byte, fault-injection, property and audit tests; no fuzzing and no real-device fsync error. |
+| Deployment readiness | 4 | Image builds and runs, but no auth, TLS, replication or backups. |
+| Completion of intended scope | 8 | Engine, APIs, durability and Docker done; real datasets and replication are not. |
+

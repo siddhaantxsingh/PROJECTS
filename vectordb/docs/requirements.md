@@ -24,6 +24,6 @@
 | Real-world datasets (SIFT/GIST/embeddings) | NOT IMPLEMENTED | synthetic datasets only |
 | Adversarial audit | VERIFIED | docs/audit.md; fail-before log and commit |
 | CI | VERIFIED | `.github/workflows/vectordb.yml` green on GitHub Actions (run 38478453681) |
-| Docker image | IMPLEMENTED BUT UNVERIFIED | Dockerfile not built (no Docker in the build environment) |
+| Docker image | VERIFIED (2026-10-16) | built with `scripts/docker_build.sh` in 92 s, 156 MB ([docker_build.log](evidence/2026-10-15/docker_build.log)); `scripts/docker_smoke.sh`: runs as uid 10001, create/upsert/filtered search over REST, data survives `docker stop` + a new container on the same volume ([docker_smoke.log](evidence/2026-10-15/docker_smoke.log)). gRPC port not probed. The `debian:bookworm-slim` base came from `mirror.gcr.io` because Docker Hub returned 429 |
 | Authentication / TLS | NOT IMPLEMENTED | by design; see docs/security.md |
 | Replication / sharding | NOT IMPLEMENTED | out of scope |
