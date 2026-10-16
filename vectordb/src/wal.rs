@@ -125,11 +125,27 @@ fn later_valid_record(data: &[u8], from: usize) -> Option<usize> {
     })
 }
 
+/// Points in [`Wal::append`] where a test can inject an I/O error.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FaultPoint {
+    /// the record write: the first half of the record is written, then the
+    /// error is returned (a short write followed by an error)
+    Write,
+    /// the fsync after a complete write (`SyncMode::Always` only)
+    Sync,
+    /// the truncate that rolls a failed append back
+    Rollback,
+}
+
+/// A fault-injection hook: returning `Err` makes that step fail.
+pub type FaultHook = Box<dyn FnMut(FaultPoint) -> std::io::Result<()> + Send>;
+
 pub struct Wal {
     file: File,
     sync: SyncMode,
     pub bytes: u64,
     failed: bool,
+    faults: Option<FaultHook>,
 }
 
 impl Wal {
@@ -149,7 +165,7 @@ impl Wal {
             file.seek(SeekFrom::Start(0))?;
             file.write_all(MAGIC)?;
             file.sync_all()?;
-            return Ok((Wal { file, sync, bytes: MAGIC.len() as u64, failed: false }, Vec::new(), data.len() as u64));
+            return Ok((Wal { file, sync, bytes: MAGIC.len() as u64, failed: false, faults: None }, Vec::new(), data.len() as u64));
         }
         if &data[..8] != MAGIC {
             return Err(WalError::Corrupt(0, "bad magic".into()));
@@ -198,7 +214,7 @@ impl Wal {
             file.sync_all()?;
         }
         file.seek(SeekFrom::Start(off as u64))?;
-        Ok((Wal { file, sync, bytes: off as u64, failed: false }, recs, repaired))
+        Ok((Wal { file, sync, bytes: off as u64, failed: false, faults: None }, recs, repaired))
     }
 
     /// Appends one record. On any failure (short write, ENOSPC, failed
@@ -211,9 +227,16 @@ impl Wal {
             return Err(WalError::Io(std::io::Error::other("write-ahead log is unusable after an unrecoverable I/O error; restart to recover")));
         }
         let buf = encode(r);
-        let res = self.file.write_all(&buf).and_then(|_| if self.sync == SyncMode::Always { self.file.sync_data() } else { Ok(()) });
+        let res = self.write_record(&buf).and_then(|_| {
+            if self.sync == SyncMode::Always {
+                self.fault(FaultPoint::Sync)?;
+                self.file.sync_data()
+            } else {
+                Ok(())
+            }
+        });
         if let Err(e) = res {
-            let rollback = self.file.set_len(self.bytes).and_then(|_| self.file.seek(SeekFrom::Start(self.bytes)).map(|_| ()));
+            let rollback = self.fault(FaultPoint::Rollback).and_then(|_| self.file.set_len(self.bytes)).and_then(|_| self.file.seek(SeekFrom::Start(self.bytes)).map(|_| ()));
             if rollback.is_err() {
                 self.failed = true;
             }
@@ -221,6 +244,32 @@ impl Wal {
         }
         self.bytes += buf.len() as u64;
         Ok(())
+    }
+
+    fn fault(&mut self, p: FaultPoint) -> std::io::Result<()> {
+        match self.faults.as_mut() {
+            Some(f) => f(p),
+            None => Ok(()),
+        }
+    }
+
+    fn write_record(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        if let Err(e) = self.fault(FaultPoint::Write) {
+            self.file.write_all(&buf[..buf.len() / 2])?;
+            return Err(e);
+        }
+        self.file.write_all(buf)
+    }
+
+    /// Test support: install (or with `None` remove) a fault-injection hook.
+    #[doc(hidden)]
+    pub fn set_fault_hook(&mut self, hook: Option<FaultHook>) {
+        self.faults = hook;
+    }
+
+    /// True after a failed rollback: the log refuses all writes until reopened.
+    pub fn is_failed(&self) -> bool {
+        self.failed
     }
 
     /// Drops all records (after a snapshot made them redundant).

@@ -248,6 +248,12 @@ impl Collection {
         Ok(v)
     }
 
+    /// Test support: install a WAL fault-injection hook (see `wal::FaultPoint`).
+    #[doc(hidden)]
+    pub fn set_wal_fault_hook(&self, hook: Option<crate::wal::FaultHook>) {
+        self.wal.lock().set_fault_hook(hook);
+    }
+
     pub fn upsert(&self, id: u64, vector: &[f32], meta: Option<Metadata>) -> Result<u64, Error> {
         // Validate BEFORE logging, so an invalid request never reaches the WAL.
         let v = self.prepare(vector, &meta)?;

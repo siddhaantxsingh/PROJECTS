@@ -12,7 +12,7 @@
 | Deletes / upserts / compaction | VERIFIED | tombstones; `rebuild`; tests |
 | Write-ahead log | VERIFIED | crash at every WAL byte; mid-log corruption (incl. length fields) fails the open |
 | Snapshots + recovery | VERIFIED | identical results after recovery (tests + benchmark); corrupt snapshot fails the open |
-| fsync on failure paths | IMPLEMENTED BUT UNVERIFIED | append rollback on I/O error; no fault-injection test |
+| fsync on failure paths | VERIFIED (2026-10-16) | `tests/wal_faults.rs`: injected errors at the record write (after a short write), at fsync, and at the rollback itself; acknowledged writes always survive a reopen, a failed write is never applied and its bytes are cut off, the log keeps working after a rolled-back error and refuses writes after a failed rollback until restart. `tests/wal_efbig.rs`: a real kernel error (EFBIG from `RLIMIT_FSIZE`, a genuine short write) with the same checks. Removing the rollback truncate fails 3 of these tests ([wal_fault_mutation.log](evidence/2026-10-15/wal_fault_mutation.log)); runs: [wal_fault_tests.log](evidence/2026-10-15/wal_fault_tests.log). A real fsync EIO from a device was not produced (needs dm-error/root) |
 | Concurrency (concurrent reads, safe writes) | VERIFIED | concurrent readers/writers test; lock-order deadlock found and fixed; directory lock |
 | REST API | VERIFIED | `tests/api.rs` against a real server |
 | gRPC API | VERIFIED | `tests/api.rs` round trip + error codes |

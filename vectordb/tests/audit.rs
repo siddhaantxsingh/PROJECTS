@@ -32,8 +32,11 @@ fn stats_concurrent_with_upserts_does_not_deadlock() {
         }
         tx.send(()).unwrap();
     });
+    // About 22 s of work on an idle 4-vCPU machine (2026-10-16), so 30 s
+    // failed under shared-machine load. A deadlock never finishes, so a
+    // generous bound still detects it.
     for _ in 0..2 {
-        rx.recv_timeout(Duration::from_secs(30)).expect("deadlock: stats() vs upsert() did not finish within 30s");
+        rx.recv_timeout(Duration::from_secs(120)).expect("deadlock: stats() vs upsert() did not finish within 120s");
     }
 }
 

@@ -11,4 +11,4 @@
 * **No authentication or TLS** (see [security.md](security.md)). No replication, sharding or backups beyond copying a snapshot.
 * **Benchmarks are synthetic** (two generated datasets) and single-machine; no SIFT/GIST/real embedding datasets were available offline.
 * **Advisory directory lock** is not reliable on some network filesystems.
-* **Not verified:** the Dockerfile has not been built in this environment; I/O fault-injection is untested.
+* **I/O fault coverage is partial.** fsync failure is injected with a test hook, and a real kernel write error is produced with `RLIMIT_FSIZE` (EFBIG). A real device fsync error (EIO) and ENOSPC were not produced. After a failed fsync whose rollback also fails, the unacknowledged record can reappear after a restart. Linux may drop dirty pages after a failed fsync; the WAL then refuses writes only if the rollback also fails, and does not re-read the file to check what reached the disk.

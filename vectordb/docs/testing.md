@@ -12,6 +12,21 @@ Run everything with `cargo test` (the test profile builds at `opt-level = 2`, so
 
 Logs of the runs recorded in this repository are in `test-logs/`.
 
+## Test timing note
+
+`audit.rs::stats_concurrent_with_upserts_does_not_deadlock` used a 30 s bound. Its work takes about 22 s on an idle 4-vCPU machine, with or without the fault hook (A/B in [audit_stats_ab.log](evidence/2026-10-15/audit_stats_ab.log)), so it failed under shared-machine load on 2026-10-15. The bound is now 120 s; a deadlock still never finishes.
+
+## WAL I/O fault injection
+
+* `tests/wal_faults.rs` installs a test-only hook (`Wal::set_fault_hook`, `Collection::set_wal_fault_hook`) that fails one step of `Wal::append`:
+  * **write**: half the record is written, then the error is returned;
+  * **fsync** (`SyncMode::Always`): the record is complete but `sync_data` fails;
+  * **rollback**: the truncate that undoes a failed append also fails.
+* For write and fsync errors the test checks that the error reaches the caller, the point is not applied, the LSN is not used, the file is cut back to the last record, later writes succeed, and after a reopen exactly the acknowledged points are present with nothing to repair.
+* When the rollback also fails, the log refuses every later write until the process restarts. After a failed fsync the complete but unacknowledged record stays in the file and **does reappear after the restart** (the client got an error, so either outcome is allowed; acknowledged writes are never lost). After a failed short write the fragment is cut off on reopen and the record does not reappear.
+* `tests/wal_efbig.rs` lowers `RLIMIT_FSIZE` so a real `write(2)` is cut short by the kernel and then fails with EFBIG (os error 27). It checks the same invariants. It is the only test in its file because the limit is process-wide.
+* With the rollback truncate removed, 3 of the 5 tests fail.
+
 ## Other checks
 
 * `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` are clean.
@@ -21,6 +36,6 @@ Logs of the runs recorded in this repository are in `test-logs/`.
 
 ## Not covered
 
-* No fault-injection tests for I/O errors (failed fsync, ENOSPC); the WAL rollback path is reviewed but untested.
+* No fsync error from a real device (dm-error/dm-flakey need root and a block device). fsync failure is injected with a test hook; the real-kernel test uses EFBIG from `RLIMIT_FSIZE`, which fails the write, not the fsync. ENOSPC is not produced directly.
 * No fuzzing of the WAL/snapshot decoders beyond the exhaustive truncation test and the reviewer's targeted cases.
 * No multi-hour soak or load test.
