@@ -143,6 +143,13 @@ func New(cfg Config) (*Agent, error) {
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
+	// The application is started with its slot directory as the working
+	// directory, so a relative state path would be resolved from inside it.
+	abs, err := filepath.Abs(cfg.StateDir)
+	if err != nil {
+		return nil, fmt.Errorf("agent: state dir: %w", err)
+	}
+	cfg.StateDir = abs
 	a := &Agent{cfg: cfg, state: "idle", hbSec: 30}
 	if cfg.RootKey != nil {
 		a.trust = &proto.Trust{Root: cfg.RootKey}

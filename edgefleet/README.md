@@ -63,15 +63,13 @@ export FLEET_ADMIN_TOKEN=$(head -c 24 /dev/urandom | base64)
 
 mkdir -p dev-1/slots/a && cp app-1.0 dev-1/slots/a/app     # the version the device ships with
 TOKEN=$(./fleetctl token | sed -n 's/.*"token": "\(.*\)".*/\1/p')
-./fleet-agent -id dev-1 -state "$PWD/dev-1" -token "$TOKEN" -release-pubkey "$PUB" -exec &
+./fleet-agent -id dev-1 -state dev-1 -token "$TOKEN" -release-pubkey "$PUB" -exec &
 
 ./fleetctl release -key release.key -version 2.0 -file app-2.0
 ./fleetctl rollout -version 2.0 -waves 10,50,100 -max-failure 0.1 -bake 10s   # prints the rollout id
 ./fleetctl status <rollout-id>
 ./fleetctl devices
 ```
-
-Pass an absolute `-state` path when using `-exec`: with a relative path the agent fails to start the app.
 
 Optional release-key rotation (devices pin a root key instead of a release key; this sequence is exercised by `e2e/TestKeyRotationWithRealBinaries`):
 
