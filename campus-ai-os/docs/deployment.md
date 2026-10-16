@@ -1,6 +1,6 @@
 # Deployment
 
-Verified here: backend + built frontend served by uvicorn against PostgreSQL 16.15 + pgvector 0.6.0 (`scripts/e2e-server.sh`, used by the browser test). The Dockerfile and compose file were **not** built or run (Docker Hub unreachable from the build environment).
+Verified here: backend + built frontend served by uvicorn against PostgreSQL 16.15 + pgvector 0.6.0 (`scripts/e2e-server.sh`, used by the browser test). The Docker image was built and smoke-tested on 2026-10-15 against host PostgreSQL (`scripts/docker_build.sh`, `scripts/docker_smoke.sh`; logs in `docs/evidence/2026-10-15/`). It has not been deployed anywhere.
 
 ```bash
 pip install -e ../groundwork -e backend

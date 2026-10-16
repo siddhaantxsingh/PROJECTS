@@ -1,92 +1,133 @@
 # Campus AI OS
 
-A multi-tenant course knowledge platform. Instructors upload lecture notes, slides (PDF), handouts and syllabi. Students ask questions and get answers built only from that material, with a citation (document, page, section) on every sentence. The platform abstains when the material does not contain the answer. Study tools (flashcards, quizzes, research view, document comparison) are generated from the same text, so every item points back to a page. Instructors see analytics designed so that no individual student's questions can be identified.
+A multi-tenant course Q&A and study platform (FastAPI + React) in which every answer is built from the course's own material and cites a document, page and section.
+
+[![campus-ai-os CI](https://github.com/siddhaantxsingh/PROJECTS/actions/workflows/campus-ai-os.yml/badge.svg?branch=ccr-a6e6c567-y4w7k8)](https://github.com/siddhaantxsingh/PROJECTS/actions/workflows/campus-ai-os.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-React%2019-blue)
+
+Instructors upload lecture notes, slides (PDF), handouts and syllabi. Students ask questions and get answers with a citation on every sentence, or an abstention when the material does not cover the question. Flashcards, quizzes, a research view and document comparison are generated from the same text, so every item points back to a page. Instructors see analytics designed so that no individual student can be identified. Retrieval and grounding come from [Groundwork](../groundwork), used as a library.
+
+**Status:** a working vertical slice, verified end to end in a browser. **Not deployed, and no real users yet.**
 
 ![Asking a question](docs/screenshots/ask.png)
 
-**Status:**
+## Highlights
 
-- **Working vertical slice, verified end to end.** The browser test covers upload → question → cited answer, abstention, flashcards, quiz and analytics.
-- **Tests:** 39 backend tests run against real PostgreSQL + pgvector, and an independent security audit found 10 defects, all fixed.
-- **New (2026-10-15):** optional answers written by a local LLM (Qwen2.5-0.5B-Instruct through llama.cpp, CPU), with every sentence checked against its cited source. Verified in a browser test. The Docker image is built and smoke-tested.
-- **Not yet:** deployed, or tried with real students (see the [beta plan](docs/beta-plan.md)).
+- **Cited answers or abstention.** Upload → question → answer with page-level citations, plus abstention on an off-topic question, is covered by a Chromium browser test against the real server and a fresh PostgreSQL database, run in CI.
+- **Course = isolated tenant.** Isolation is enforced twice: membership checks in the service and tenant scoping in the Groundwork engine. Non-members get 404 for every course resource, and admins cannot read course content.
+- **Security found and fixed by test.** An independent security and privacy review found 10 defects (2 high: demoted faculty kept instructor rights; analytics could identify single students). Each was reproduced and fixed with a regression test ([audit](docs/audit.md)).
+- **Privacy-preserving analytics.** Instructors see only aggregates with at least k = 5 distinct eligible students per figure ([ADR 0003](docs/decisions/0003-k-anonymous-analytics.md)).
+- **Quotas that hold under concurrency.** Before the fix, 20 parallel questions with a quota of 1 recorded 4, and 10 parallel uploads reached 2× the storage quota. Both are now covered by concurrency tests.
+- **Optional local LLM answers, still checked.** With `CAMPUS_LLM_PROVIDER=llamacpp`, Qwen2.5-0.5B-Instruct writes the answer and every sentence is checked against its cited source. Verified in an opt-in browser test ([log](docs/evidence/2026-10-15/e2e-llm.log), [screenshot](docs/screenshots/ask-llm.png)). Extractive answers stay the default.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    UI[React SPA<br/>frontend/src] -->|HttpOnly session cookie<br/>Origin check on writes| API[FastAPI routes<br/>backend/campus/app.py]
+    API --> AUTH[auth.py<br/>scrypt passwords, sessions]
+    API --> SVC[service.py<br/>roles, membership, quotas, k-anonymity]
+    SVC --> STUDY[study.py<br/>flashcards, quizzes,<br/>research, compare]
+    SVC --> GW[Groundwork engine<br/>tenant = course]
+    STUDY --> GW
+    GW --> LLM[Answer provider<br/>extractive or local llama.cpp<br/>+ grounding enforcement]
+    SVC --> DB[(PostgreSQL + pgvector<br/>app_* tables via db.py)]
+    GW --> DB
+```
+
+The FastAPI layer only routes; every authorization decision is made in `service.py`, which checks platform role, course membership and role, quotas and the k-anonymity rule on each operation. Each course maps to a Groundwork tenant, so parsing, page-bounded chunking, BM25 and LSA retrieval, RM3, reranking, citation checks and injection filtering all run per course. Study tools are extraction and retrieval over the course's own text, so no item is invented. App tables and Groundwork tables live in the same PostgreSQL database. The process is single-instance, with per-course locks around uploads. Details: [docs/architecture.md](docs/architecture.md).
 
 ## Features
 
 | Area | What exists |
 |---|---|
-| Accounts | Email + password (scrypt) and HttpOnly session cookies; logout and password changes revoke sessions; self-service account deletion |
-| Roles (RBAC) | Platform: admin, faculty, student. Course: instructor, student. Students join a course with a join code. Instructors can be added and removed, but never the last one. |
-| Course workspaces | Each course is an isolated retrieval tenant. Members only; any other id returns 404. |
-| Documents | PDF (page-aware), Markdown, HTML, text. Upload is idempotent. Deleting a document also deletes its flashcards and any quizzes that quote it. |
-| Ask | Grounded extractive answers with sentence-level citations and a grounding score (default), or answers written by a local LLM with the same citation checks (`CAMPUS_LLM_PROVIDER=llamacpp`). Abstains when the material doesn't cover the question. Chunks that look like prompt injection are left out. |
-| Research mode | RM3-expanded retrieval with reranking; evidence sentences grouped by document, with pages |
-| Study mode | Flashcards built from definitional sentences. Cloze-style multiple-choice quizzes: answers are hidden until the student submits, and the results show each answer's source page. |
-| Compare | Key terms shared by two documents and distinctive to each, plus matching sections with similarity scores |
-| Analytics | k-anonymous (k = 5) aggregates: question volume, abstention rate, topics, most-cited documents, feedback, quiz scores |
-| Quotas | Daily questions per user and storage per course. Both stay correct when requests run concurrently. |
-| Feedback | Thumbs up/down and a comment, on your own answers only |
-| Admin | Users, roles, disable (which revokes sessions), per-user quotas, platform stats. Admins cannot read course content. |
+| Accounts and roles | Email + password (scrypt), HttpOnly session cookies, revocation on logout and password change, self-service deletion. Platform roles admin, faculty, student; course roles instructor, student; join by code. |
+| Documents | PDF (page-aware), Markdown, HTML, text. Idempotent upload. Deleting a document also deletes its flashcards and quizzes that quote it. |
+| Ask | Grounded extractive answers with sentence-level citations and a grounding score, or local LLM answers with the same checks. Chunks that look like prompt injection are excluded. |
+| Research and compare | RM3-expanded retrieval with evidence grouped by document; shared and distinctive terms and matching sections for two documents. |
+| Study | Flashcards from definitional sentences; cloze-style quizzes whose answers stay hidden until submission. |
+| Analytics, quotas, feedback, admin | k-anonymous aggregates; per-user daily questions and per-course storage; feedback on your own answers only; user, role and quota admin. |
 
-## Architecture
+## Quick start
 
-```
-React SPA ──cookie──► FastAPI routes ──► Campus service (authz, quotas, k-anonymity) ──► Groundwork engine (tenant per course)
-                                              └─► study tools (extractive)                └─► PostgreSQL + pgvector
-```
-
-The retrieval and grounding engine is [Groundwork](../groundwork), developed alongside this repository and used here as a library. It provides BM25, LSA embeddings, RM3, reranking, citation validation and injection filtering. Details: [docs/architecture.md](docs/architecture.md).
-
-## Engineering trade-offs
-
-- **Extraction by default, generation opt-in.** Answers and study items are sentences from the course material, so nothing is invented. A local LLM can write answers instead; its sentences are kept only if their cited source supports them. A 0.5B model is weak, so it often abstains ([ADR 0002](docs/decisions/0002-extractive-study-tools.md)).
-- **Course = tenant.** Isolation is enforced twice: membership checks in the service and tenant scoping in the engine ([ADR 0001](docs/decisions/0001-course-as-tenant.md)).
-- **Privacy over insight.** Instructors see only aggregates where at least 5 eligible students contributed ([ADR 0003](docs/decisions/0003-k-anonymous-analytics.md)).
-- **Single process.** Simple and correct, but not horizontally scalable as is.
-
-## Build, test, run
+Needs Python 3.11+, Node 22 and PostgreSQL with pgvector on `127.0.0.1:5432` (user `postgres`). Run from the monorepo root, since Groundwork is a sibling directory.
 
 ```bash
+docker run -d -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust pgvector/pgvector:pg16
+
+cd campus-ai-os
 pip install -e ../groundwork -e 'backend[dev]'
-(cd frontend && npm ci && npm run build)
-cd backend && pytest                                   # 39 tests, needs PostgreSQL with pgvector on 127.0.0.1:5432
-cd ../frontend && npx playwright test                  # browser E2E: starts the real server on a fresh database
+(cd backend && pytest)                          # 39 backend tests on real PostgreSQL + pgvector
+cd frontend && npm ci && npm run build
+npx playwright install chromium
+CHROMIUM_PATH=$(node -e "console.log(require('playwright').chromium.executablePath())") \
+  npx playwright test                           # starts the real server on a fresh database
 ```
 
-To run it yourself, see [docs/deployment.md](docs/deployment.md).
+To run the app yourself (environment variables, TLS, backups), see [docs/deployment.md](docs/deployment.md). `scripts/e2e-server.sh` shows a minimal local configuration.
 
-## Evidence
+## Results
 
-- [docs/testing.md](docs/testing.md), plus logs in `test-logs/` and screenshots in `docs/screenshots/`.
-- [docs/audit.md](docs/audit.md): 10 security and privacy defects, all reproduced and then fixed (2 high: demoted faculty kept instructor rights; analytics could identify individual students). The browser test also found a stemming defect in Groundwork, which was fixed there.
-- [SECURITY.md](SECURITY.md): the threat model and which test covers each control.
+There are no usage results: the product has not been put in front of students or faculty. What has been measured is correctness:
 
-## Known limitations
-
-[docs/limitations.md](docs/limitations.md):
-
-- No real users yet.
-- LLM answers come from a very small local model (opt-in) and are slow on CPU.
-- Study tools depend on definitional sentences in the material.
-- Single process.
-- No SSO or MFA.
-- Not deployed; the Docker image is built and smoke-tested only.
-
-## Roadmap
-
-1. Run a beta with 1–2 courses and measure real usage ([plan](docs/beta-plan.md)).
-2. Try a larger LLM (local 3B or hosted) for synthesised answers, keeping the citation checks.
-3. OIDC sign-in with the university's identity provider; email verification.
-4. Advisory locks and a shared index, for multiple replicas.
-5. Spaced-repetition scheduling for flashcards.
-
-## Scorecard (2026-10-15, self-assessed)
-
-| Dimension | Score | Why not higher |
+| Suite | Result | Evidence |
 |---|---|---|
-| Fresher-portfolio strength | 7/10 | Full-stack with real security tests, but no real users. |
-| Engineering maturity | 7/10 | CI with browser E2E and an audit; single process. |
-| Deployment readiness | 5/10 | Image built and smoke-tested; never deployed, no backups exercised. |
-| Completion of intended scope | 7/10 | LLM answers work but the 0.5B model is weak and slow; beta not run. |
+| Backend API tests (real PostgreSQL + pgvector) | 39 passed | [test-logs/pytest-2026-10-14.txt](test-logs/pytest-2026-10-14.txt) |
+| Browser E2E, default (Chromium) | 1 passed | [e2e-default.log](docs/evidence/2026-10-15/e2e-default.log) |
+| Browser E2E, local LLM (opt-in, not in CI) | 1 passed in 4.2 min on a heavily loaded CPU | [e2e-llm.log](docs/evidence/2026-10-15/e2e-llm.log) |
+| Docker image build and smoke test | SMOKE OK | [docker-smoke-default.log](docs/evidence/2026-10-15/docker-smoke-default.log) |
 
-License: not yet chosen by the owner.
+Answer quality is that of Groundwork; its retrieval and generation benchmarks are in [groundwork/docs/benchmarks.md](../groundwork/docs/benchmarks.md). In those benchmarks Qwen2.5-0.5B abstained on 65 % of queries after grounding enforcement.
+
+## How correctness is verified
+
+- **Backend tests** (`backend/tests/`, 27 feature tests + 12 audit regressions): vertical slice with page citations, abstention, RBAC and course isolation, CSRF, login limits, cookie flags, quiz answer hiding and grading, quotas under concurrency, k-anonymous analytics, document, account and course deletion (including crash-resume), admin actions. Inventory: [docs/testing.md](docs/testing.md).
+- **Browser E2E** (`frontend/e2e/campus.spec.ts`): an admin promotes a user to faculty, who creates a course and uploads a document; a student joins by code, gets a cited answer and an abstention, browses flashcards and takes a quiz; instructor analytics stay hidden below k.
+- **Audit regressions:** each of the 10 defects in [docs/audit.md](docs/audit.md) has a test.
+- **CI:** [`.github/workflows/campus-ai-os.yml`](../.github/workflows/campus-ai-os.yml) runs the backend tests, the frontend type check and build, and the Playwright test on GitHub Actions. It also runs when Groundwork changes.
+- **Threat model:** [SECURITY.md](SECURITY.md) maps each control to the test that covers it.
+
+## Design decisions
+
+- **Course = tenant.** Isolation is checked in the service and again in the engine, so a document id from another course is simply not in the index ([ADR 0001](docs/decisions/0001-course-as-tenant.md)).
+- **Extraction by default, generation opt-in.** Answers and study items are sentences from the material, so nothing is invented. A local LLM can write answers, but its sentences are kept only if their cited source supports them, so it often abstains ([ADR 0002](docs/decisions/0002-extractive-study-tools.md)).
+- **Privacy over insight.** k-anonymity (k = 5) with a membership-age rule, not differential privacy ([ADR 0003](docs/decisions/0003-k-anonymous-analytics.md)).
+- **Single process.** Simple and correct; multiple replicas would need PostgreSQL advisory locks and a shared index.
+
+## Limitations and status
+
+- **Not deployed and no real users.** No usage, retention or satisfaction data exists. A beta is planned, not run ([beta plan](docs/beta-plan.md)).
+- **LLM answers come from a very small local model** and are slow on CPU: one answer took up to 333 s on the overloaded shared machine ([api-llm.log](docs/evidence/2026-10-15/api-llm.log)). In that API check both on-topic questions ended in abstention after enforcement.
+- Study tools depend on definitional sentences in the material.
+- No email verification, password reset, SSO or MFA.
+- Single process; Chromium is the only browser tested.
+
+Full list: [docs/limitations.md](docs/limitations.md). Requirement status, including the BLOCKED licence decision: [docs/requirements.md](docs/requirements.md).
+
+## Repository layout
+
+```
+campus-ai-os/
+├── backend/
+│   ├── campus/          # app.py (routes), service.py (authz, quotas), study.py, auth.py, db.py
+│   └── tests/           # API, security and audit regression tests
+├── frontend/
+│   ├── src/             # React SPA
+│   └── e2e/             # Playwright browser tests
+├── docs/                # architecture, ADRs, audit, testing, deployment, evidence, screenshots
+├── scripts/             # E2E server, Docker build and smoke test
+└── Dockerfile
+```
+
+## Documentation
+
+- [Architecture](docs/architecture.md) and [design decisions](docs/decisions/)
+- [Testing](docs/testing.md), [audit](docs/audit.md) and [security](SECURITY.md)
+- [Requirements matrix](docs/requirements.md) and [limitations](docs/limitations.md)
+- [Deployment](docs/deployment.md) and [beta plan](docs/beta-plan.md)
+- [Scorecard](docs/scorecard.md)
+
+---
+
+Built by Siddhant Singh ([@siddhaantxsingh](https://github.com/siddhaantxsingh)). Licence: not yet chosen.
